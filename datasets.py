@@ -34,10 +34,10 @@ def expand_array(input_array, k):
 
     repeated = input_array[indices]  # shape (n_needed, 5, 6)
     return repeated
-VAL_SPLIT_PATH = [f.split('_')[0] for f in os.listdir("/mnt/ssda/PUGS/data/abo_500/scenes")]
+VAL_SPLIT_PATH = [f.split('_')[0] for f in os.listdir("/cluster/umoja/aminebdj/datasets/ABO/abo_500/scenes")]
 
 class ABO_DATASET(Dataset):
-    def __init__(self, transform=None, split = 'train', overfit=False, path_to_dataset='/mnt/ssda/abo-benchmark-material', path_to_annotations='/mnt/ssda/datasets/abo_500/filtered_product_weights.json'):
+    def __init__(self, transform=None, split = 'train', overfit=False, path_to_dataset='/cluster/umoja/aminebdj/datasets/ABO/abo-benchmark-material', path_to_annotations='/cluster/umoja/aminebdj/datasets/ABO/abo_500/filtered_product_weights.json'):
         """
         Args:
             base_path (string): Path to the directory containing the subfolders with data.
