@@ -34,15 +34,16 @@ def expand_array(input_array, k):
 
     repeated = input_array[indices]  # shape (n_needed, 5, 6)
     return repeated
-VAL_SPLIT_PATH = [f.split('_')[0] for f in os.listdir("/cluster/umoja/aminebdj/datasets/ABO/abo_500/scenes")]
 
 class ABO_DATASET(Dataset):
-    def __init__(self, transform=None, split = 'train', overfit=False, path_to_dataset='/cluster/umoja/aminebdj/datasets/ABO/abo-benchmark-material', path_to_annotations='/cluster/umoja/aminebdj/datasets/ABO/abo_500/filtered_product_weights.json'):
+    def __init__(self, transform=None, split = 'train', overfit=False, path_to_dataset='/cluster/umoja/aminebdj/datasets/ABO/abo-benchmark-material', val_path="/cluster/umoja/aminebdj/datasets/ABO/abo_500/scenes", path_to_annotations='/cluster/umoja/aminebdj/datasets/ABO/abo_500/filtered_product_weights.json'):
         """
         Args:
             base_path (string): Path to the directory containing the subfolders with data.
             transform (callable, optional): Optional transform to be applied to the images.
         """
+        VAL_SPLIT_PATH = [f.split('_')[0] for f in os.listdir(val_path)]
+
         self.base_path = path_to_dataset
         self.sample_to_mass = load_json(path_to_annotations)
         self.transform = transform
@@ -71,7 +72,7 @@ class ABO_DATASET(Dataset):
 
         # Get list of files (assuming all folders have same files in same order)
         self.file_list = split_to_file[split]
-        self.file_list = split_to_file['val'][:60] if overfit else self.file_list 
+        self.file_list = split_to_file['val'][:2] if overfit else self.file_list 
     def __len__(self):
         return len(self.file_list)
     

@@ -8,31 +8,49 @@ from torch.utils.data import Dataset, DataLoader
 import numpy as np
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 # 1. Load model
-dinov2_vits14 = torch.hub.load('facebookresearch/dinov2', 'dinov2_vits14')
-dinov2_vits14.eval().to(device)
-
-# 4. Feature Extractor using DINO
-@torch.no_grad()
-def extract_features(images):
-    return dinov2_vits14.forward_features(images)['x_norm_clstoken']
-
-# 5. Regression Head (Trainable)
-class DINORegressor(nn.Module):
-    def __init__(self, input_dim=384, hidden_dim=256, device=device):
-        super(DINORegressor, self).__init__()
+class Regressor(nn.Module):
+    def __init__(self, feature_extractor='dino', hidden_dim=256, device=device):
+        super(Regressor, self).__init__()
         self.device = device
-        self.fc1 = nn.Linear(input_dim, hidden_dim)
-        self.relu = nn.ReLU()
-        self.fc2 = nn.Linear(hidden_dim, 1)
+        self.feature_extractor_name = feature_extractor
 
+        if feature_extractor == 'dino':
+            self.feature_extractor = torch.hub.load('facebookresearch/dinov2', 'dinov2_vits14').eval().to(device)
+            self.input_dim = 384  # For dinov2_vits14
+        elif feature_extractor == 'clip':
+            import clip
+            self.feature_extractor, _ = clip.load("ViT-B/32", device=device)
+            self.feature_extractor.eval()
+            self.input_dim = 512  # CLIP ViT-B/32 output dim
+        else:
+            raise ValueError(f"Unsupported feature extractor: {feature_extractor}")
+
+        self.regressor = nn.Sequential(
+            nn.Linear(self.input_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, 1)
+        )
+
+    @torch.no_grad()
+    def extract_features(self, images):
+        if self.feature_extractor_name == 'dino':
+            return self.feature_extractor.forward_features(images)['x_norm_clstoken']
+        elif self.feature_extractor_name == 'clip':
+            images = transforms.Resize(224)(images)  # Ensure proper size
+            images = transforms.CenterCrop(224)(images)
+            return self.feature_extractor.encode_image(images)
+    
     def forward(self, images):
-        a, b = images.shape[0], images.shape[1]
-        rest = images.shape[2:]
+        B, N, C, H, W = images.shape  # For batch processing of multiple images per sample
+        images = images.view(B * N, C, H, W).to(self.device)
+
         with torch.no_grad():
-            features = extract_features(images.view(a * b, *rest))
-            
-        x = self.fc1(features)
-        x = self.relu(x)
-        x = self.fc2(x)
-        # x = x.view(a, b, x.shape[-1])
-        return x.squeeze(1)
+            features = self.extract_features(images)
+
+        out = self.regressor(features.float())
+        # out = out.view(B, N)  # Return per-sample predictions if needed
+        return out.squeeze()
