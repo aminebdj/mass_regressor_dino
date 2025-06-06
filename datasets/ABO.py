@@ -34,19 +34,36 @@ def expand_array(input_array, k):
 
     repeated = input_array[indices]  # shape (n_needed, 5, 6)
     return repeated
+import torchvision.transforms as T
 
 class ABO_DATASET(Dataset):
-    def __init__(self, transform=None, split = 'train', overfit=False, path_to_dataset='/cluster/umoja/aminebdj/datasets/ABO/abo-benchmark-material', val_path="/cluster/umoja/aminebdj/datasets/ABO/abo_500/scenes", path_to_annotations='/cluster/umoja/aminebdj/datasets/ABO/abo_500/filtered_product_weights.json'):
+    def __init__(self, split = 'train', overfit=False, path_to_dataset='/cluster/umoja/aminebdj/datasets/ABO/abo-benchmark-material', val_path="/cluster/umoja/aminebdj/datasets/ABO/abo_500/scenes", path_to_annotations='/cluster/umoja/aminebdj/datasets/ABO/abo_500/filtered_product_weights.json', return_probs = True):
         """
         Args:
             base_path (string): Path to the directory containing the subfolders with data.
             transform (callable, optional): Optional transform to be applied to the images.
         """
         VAL_SPLIT_PATH = [f.split('_')[0] for f in os.listdir(val_path)]
-
+        self.return_probs = return_probs
         self.base_path = path_to_dataset
         self.sample_to_mass = load_json(path_to_annotations)
-        self.transform = transform
+        masses_list = list(self.sample_to_mass.values())
+        self.max_w = max(masses_list)
+        self.min_w = min(masses_list)
+        probs = (np.array(masses_list)-self.min_w)/(self.max_w-self.min_w)
+        self.sample_to_prob = dict(zip(list(self.sample_to_mass.keys()), list(probs)))
+        # exit()
+        self.transform = T.Compose([
+                T.RandomHorizontalFlip(p=0.5),
+                T.ColorJitter(
+                    brightness=0.2,
+                    contrast=0.2,
+                    saturation=0.2,
+                    hue=0.1
+                ),
+                T.RandomRotation(degrees=10),
+            ])
+        self.transform_in  = False if overfit else True
         self.split = split
         self.num_images = 3 if split=='train' else -1 
         
@@ -90,8 +107,8 @@ class ABO_DATASET(Dataset):
             sorted_indices = sorted(range(len(path_to_data)), key=lambda i: int(path_to_data[i].split("_")[1].split('.')[0]))
             path_to_data = [path_to_data[i] for i in sorted_indices]
 
-                
-            frame_indices = random.sample(range(len(path_to_data)), self.num_images) if frame_indices is None else frame_indices
+            num_samples = len(path_to_data) if self.num_images == -1 else self.num_images
+            frame_indices = random.sample(range(len(path_to_data)), num_samples) if frame_indices is None else frame_indices
             path_to_data = [path for path in path_to_data if int(os.path.basename(path).split('.')[0].split('_')[-1]) in frame_indices]
             imgs = np.stack([np.array(Image.open(path)) for path in  path_to_data])
             
@@ -100,8 +117,8 @@ class ABO_DATASET(Dataset):
                 expen = len(imgs)//len(masks)
                 expanded_masks = np.repeat(masks, expen, axis=0)[:len(imgs)]
                 imgs = imgs*expanded_masks[..., None]
-                if len(imgs) != self.num_images*3:
-                    imgs_additional = expand_array(imgs, self.num_images*3)
+                if len(imgs) != num_samples*3:
+                    imgs_additional = expand_array(imgs, num_samples*3)
                     imgs = np.concatenate([imgs, imgs_additional])
             return imgs, frame_indices
         
@@ -122,7 +139,7 @@ class ABO_DATASET(Dataset):
         
         # Convert to tensors
         img_tensor = resize_to_patch_multiple(torch.from_numpy(image).float().permute(0,3, 1, 2) / 255.0)
-        if self.split == 'train' and self.transform is not None:
+        if self.split == 'train' and self.transform_in:
             img_tensor = self.transform(img_tensor)
         sample = {
             'image': img_tensor,
@@ -135,5 +152,5 @@ class ABO_DATASET(Dataset):
         
         
         
-        target_label = self.sample_to_mass[self.file_list[idx]]
-        return sample, torch.tensor([target_label])
+        target_label = self.sample_to_prob[self.file_list[idx]] if self.return_probs else self.sample_to_mass[self.file_list[idx]]
+        return sample, torch.tensor([target_label,1-target_label ])
