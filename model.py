@@ -21,7 +21,7 @@ class Regressor(nn.Module):
             import clip
             self.feature_extractor, _ = clip.load("RN50", device=device)
             self.feature_extractor.eval()
-            self.input_dim = 512  # CLIP ViT-B/32 output dim
+            self.input_dim = 256  # CLIP ViT-B/32 output dim
             # Freeze all CLIP parameters
             for param in self.feature_extractor.parameters():
                 param.requires_grad = False
