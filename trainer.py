@@ -8,6 +8,7 @@ from tqdm import tqdm
 from datetime import datetime
 import torchvision.transforms as T
 
+
 def evaluate(model, dataloader, device, num_images=3):
     model.eval()
     total_loss = 0.0

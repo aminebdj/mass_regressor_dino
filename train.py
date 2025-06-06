@@ -5,7 +5,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train Transformer on DINO features')
 
     parser.add_argument('--device', type=str, default='cuda', help='Device to use: "cuda" or "cpu"')
-    parser.add_argument('--batch_size', type=int, default=128, help='Batch size for training')
+    parser.add_argument('--batch_size', type=int, default=1, help='Batch size for training')
     parser.add_argument('--save_best_model_in', type=str, default='./logs', help='Directory to save best model')
     parser.add_argument('--num_epochs', type=int, default=1000, help='Number of training epochs')
     parser.add_argument('--overfit', type=bool, default=False, help='Number of training epochs')
