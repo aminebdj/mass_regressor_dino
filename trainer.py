@@ -48,7 +48,7 @@ def train(data_path,gt_path,val_path,device='cuda', batch_size=8, save_best_mode
     train_dataset = ABO_DATASET(split='train', transform=transform, overfit=overfit, path_to_dataset=data_path, val_path=val_path, path_to_annotations=gt_path)
     val_dataset = ABO_DATASET(split='val', overfit=overfit, path_to_dataset=data_path, val_path=val_path, path_to_annotations=gt_path)
     # train_dataset[0]
-    train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers,pin_memory=True)
+    train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=3*(num_workers//4),pin_memory=True)
     val_dataloader = DataLoader(val_dataset, batch_size=1, shuffle=False)
 
     best_val_loss = float('inf')
@@ -56,6 +56,7 @@ def train(data_path,gt_path,val_path,device='cuda', batch_size=8, save_best_mode
     with open(log_path, 'w') as log_file:
         log_file.write("Epoch,TrainLoss,ValLoss\n")
     step = 0
+    print(f"[Loading] with {num_workers} cores")
     for epoch in range(num_epochs):
         model.train()
         running_train_loss = 0.0
