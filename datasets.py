@@ -48,7 +48,7 @@ class ABO_DATASET(Dataset):
         self.sample_to_mass = load_json(path_to_annotations)
         self.transform = transform
         self.split = split
-        self.num_images = 3
+        self.num_images = 3 if split=='train' else -1 
         
         # Verify all required subdirectories exist
         self.required_folders = {
@@ -89,7 +89,7 @@ class ABO_DATASET(Dataset):
 
             sorted_indices = sorted(range(len(path_to_data)), key=lambda i: int(path_to_data[i].split("_")[1].split('.')[0]))
             path_to_data = [path_to_data[i] for i in sorted_indices]
-            
+
                 
             frame_indices = random.sample(range(len(path_to_data)), self.num_images) if frame_indices is None else frame_indices
             path_to_data = [path for path in path_to_data if int(os.path.basename(path).split('.')[0].split('_')[-1]) in frame_indices]
@@ -121,8 +121,11 @@ class ABO_DATASET(Dataset):
         # depth = load_exr()
         
         # Convert to tensors
+        img_tensor = resize_to_patch_multiple(torch.from_numpy(image).float().permute(0,3, 1, 2) / 255.0)
+        if self.split == 'train' and self.transform is not None:
+            img_tensor = self.transform(img_tensor)
         sample = {
-            'image': resize_to_patch_multiple(torch.from_numpy(image).float().permute(0,3, 1, 2) / 255.0),
+            'image': img_tensor,
             # 'masks': masks,
             # 'normal': torch.from_numpy(normal).float().permute(0,3, 1, 2) / 255.0,
             # 'metallic_roughness': torch.from_numpy(metallic_roughness).float().permute(0,3, 1, 2) / 255.0,
@@ -130,8 +133,7 @@ class ABO_DATASET(Dataset):
             # 'depth': torch.from_numpy(depth).float().unsqueeze(1)  # Add channel dimension
         }
         
-        if self.split == 'train' and self.transform is not None:
-            sample = self.transform(sample)
+        
         
         target_label = self.sample_to_mass[self.file_list[idx]]
         return sample, torch.tensor([target_label])

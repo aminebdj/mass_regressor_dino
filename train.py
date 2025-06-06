@@ -13,6 +13,7 @@ if __name__ == '__main__':
     parser.add_argument('--data_path', type=str, default='/mnt/ssda/abo-benchmark-material', help='Number of training epochs')
     parser.add_argument('--gt_path', type=str, default='/mnt/ssda/datasets/abo_500/filtered_product_weights.json', help='Number of training epochs')
     parser.add_argument('--val_path', type=str, default='/mnt/ssda/datasets/abo_500/scenes', help='Number of training epochs')
+    parser.add_argument('--tune_blocks', type=list, default=['layer4'], help='Number of training epochs')
 
     args = parser.parse_args()
 
@@ -26,4 +27,5 @@ if __name__ == '__main__':
         data_path=args.data_path,
         gt_path=args.gt_path,
         val_path=args.val_path,
+        tune_blocks = args.tune_blocks
     )
