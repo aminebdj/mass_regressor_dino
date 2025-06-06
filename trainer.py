@@ -7,6 +7,8 @@ from model import Regressor
 from tqdm import tqdm
 from datetime import datetime
 import torchvision.transforms as T
+import multiprocessing
+num_workers = multiprocessing.cpu_count()  # Or set a specific number like 4 or 8
 def evaluate(model, dataloader, device, num_images=3):
     model.eval()
     total_loss = 0.0
@@ -46,7 +48,7 @@ def train(data_path,gt_path,val_path,device='cuda', batch_size=8, save_best_mode
     train_dataset = ABO_DATASET(split='train', transform=transform, overfit=overfit, path_to_dataset=data_path, val_path=val_path, path_to_annotations=gt_path)
     val_dataset = ABO_DATASET(split='val', overfit=overfit, path_to_dataset=data_path, val_path=val_path, path_to_annotations=gt_path)
     # train_dataset[0]
-    train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers,pin_memory=True)
     val_dataloader = DataLoader(val_dataset, batch_size=1, shuffle=False)
 
     best_val_loss = float('inf')
