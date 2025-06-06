@@ -6,7 +6,7 @@
 #SBATCH --cpus-per-task=4
 #SBATCH --constraint="a100|rtx_a6000"
 #SBATCH --time=4-00:00:00
-#SBATCH --output=./slurm/dino_bb_%j.log
+#SBATCH --output=./slurm/classifier_bb_%j.log
 #SBATCH --partition=submit
 #SBATCH --exclude=ikarus
 
