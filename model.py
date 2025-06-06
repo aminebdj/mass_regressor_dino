@@ -199,7 +199,7 @@ def setup_cfg():
     cfg = get_cfg_default()
     extend_cfg(cfg)
 
-    cfg.merge_from_file("/mnt/ssda/physical_pro_pred/mass_regressor_dino/configs/trainers/MaPLe/vit_b16_c2_ep5_batch4_2ctx.yaml")
+    cfg.merge_from_file("./configs/trainers/MaPLe/vit_b16_c2_ep5_batch4_2ctx.yaml")
 
     cfg.freeze()
     return cfg
