@@ -8,6 +8,79 @@ from tqdm import tqdm
 from datetime import datetime
 import torch.nn as nn
 import torch.nn.functional as F
+import matplotlib.pyplot as plt
+import numpy as np
+def save_preds_gt(validation_gt, validation_preds, epoch, save_figres_in):
+
+    # Convert to NumPy arrays
+    validation_gt = np.array(validation_gt)
+    validation_preds = np.array(validation_preds)
+
+    # Avoid division or log errors by clipping small values
+    epsilon = 1e-8
+    validation_gt = np.clip(validation_gt, epsilon, None)
+    validation_preds = np.clip(validation_preds, epsilon, None)
+
+    # Sort by descending ground truth
+    sorted_indices = np.argsort(-validation_gt)
+    gt_sorted = validation_gt[sorted_indices]
+    pred_sorted = validation_preds[sorted_indices]
+
+    # Compute per-sample metrics
+    ade = np.abs(gt_sorted - pred_sorted)
+    alde = np.abs(np.log(gt_sorted) - np.log(pred_sorted))
+    ape = np.abs(gt_sorted - pred_sorted) / gt_sorted
+    mnre = np.minimum(gt_sorted / pred_sorted, pred_sorted / gt_sorted)
+
+    # Plot all 4 metrics
+    plt.figure(figsize=(12, 8))
+
+    plt.subplot(2, 2, 1)
+    plt.plot(ade, label='ADE', color='blue')
+    plt.title('Absolute Difference Error (ADE)')
+    plt.ylim([0, np.max(ade)*1.1])
+    plt.grid(True)
+
+    plt.subplot(2, 2, 2)
+    plt.plot(alde, label='ALDE', color='orange')
+    plt.title('Absolute Log Difference Error (ALDE)')
+    plt.ylim([0, np.max(alde)*1.1])
+    
+    plt.grid(True)
+
+    plt.subplot(2, 2, 3)
+    plt.plot(ape, label='APE', color='green')
+    plt.ylim([0, 1.1])
+    
+    plt.title('Absolute Percentage Error (APE)')
+    plt.grid(True)
+
+    plt.subplot(2, 2, 4)
+    plt.plot(mnre, label='MnRE', color='red')
+    plt.ylim([0, 1.1])
+    plt.title('Min Ratio Error (MnRE)')
+    plt.grid(True)
+
+    plt.suptitle(f'Error Metrics per Sample (Sorted by GT) - Epoch {epoch+1}', fontsize=14)
+    plt.tight_layout(rect=[0, 0, 1, 0.96])
+    plt.savefig(save_figres_in.replace('.png', '_metrics.png'))
+    plt.close()
+    plt.figure(figsize=(10, 6))
+    plt.plot(gt_sorted, label='Ground Truth', color='blue')
+    plt.plot(pred_sorted, label='Predictions', color='red')
+    plt.ylim([0, max([np.max(pred_sorted), np.max(gt_sorted)])*1.1])
+    
+    plt.title(f'Normal Predictions vs Ground Truth - Epoch {epoch+1}')
+    plt.xlabel('Sample Index')
+    plt.ylabel('Value')
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+
+    # Save this figure separately
+    plt.savefig(save_figres_in.replace('.png', '_sorted.png'))
+    plt.close()
+    
 def soft_cross_entropy(logits, target_probs, reduction='mean'):
     """
     logits: (batch_size, num_classes)
@@ -28,7 +101,8 @@ def evaluate(maple_trainer, dataloader, device, num_images=3):
     maple_trainer.model.eval()
     total_loss = 0.0
     b_size = 100
-
+    validation_preds = []
+    validation_gt = []
     with torch.no_grad():
         num_images = 0
         for data, targets in dataloader:
@@ -52,10 +126,12 @@ def evaluate(maple_trainer, dataloader, device, num_images=3):
             target_mass = tragets_ext[:, 0] * min_mass + (1 - tragets_ext[:, 0]) * max_mass
 
             loss = (pred_mass - target_mass).abs().sum()
+            validation_gt += target_mass.cpu().tolist() 
+            validation_preds += pred_mass.cpu().tolist() 
             total_loss += loss.item()
             num_images += preds.shape[0]
 
-    return total_loss / num_images
+    return total_loss / num_images, validation_gt, validation_preds
 def train(data_path,gt_path,val_path,device='cuda', batch_size=8, save_best_model_in='./logs', num_epochs=100, overfit=False, backbone='clip', tune_blocks=[]):
 
     # model = Regressor(feature_extractor = backbone, tune_blocks=tune_blocks).to(device)
@@ -104,14 +180,17 @@ def train(data_path,gt_path,val_path,device='cuda', batch_size=8, save_best_mode
             # maple_trainer.optim.update_lr()
             running_train_loss += loss.item()
             print(f"Step {step+1}: Train Loss = {loss.item():.4f}")
-        avg_train_loss = running_train_loss / num_images
-        val_loss = evaluate(maple_trainer, val_dataloader, device)
+        if epoch % 10 == 0:
+            avg_train_loss = running_train_loss / num_images
+            val_loss, validation_gt, validation_preds = evaluate(maple_trainer, val_dataloader, device)
 
-        print(f"Epoch {epoch+1}: Train Loss = {avg_train_loss/len(val_dataloader.dataset):.4f}, ADE = {val_loss:.4f}")
-
-        # Append losses to log file
-        with open(log_path, 'a') as log_file:
-            log_file.write(f"{epoch+1},{avg_train_loss:.4f},{val_loss:.4f}\n")
+            print(f"Epoch {epoch+1}: Train Loss = {avg_train_loss/len(val_dataloader.dataset):.4f}, ADE = {val_loss:.4f}")
+            save_figres_in = '/'.join(log_path.split('/')[:-1]+['per_sample_preds', f'{epoch}.png'])
+            os.makedirs('/'.join(save_figres_in.split('/')[:-1]), exist_ok=True)
+            save_preds_gt(validation_gt, validation_preds, epoch, save_figres_in)
+            # Append losses to log file
+            with open(log_path, 'a') as log_file:
+                log_file.write(f"{epoch+1},{avg_train_loss:.4f},{val_loss:.4f}\n")
 
         # # Save best model
         # if val_loss < best_val_loss:
