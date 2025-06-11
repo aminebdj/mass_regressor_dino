@@ -11,4 +11,4 @@
 #SBATCH --exclude=ikarus
 
 # Run your script
-python train.py --num_epochs 1000 --experiment_name clip_ft_maple --batch_size 128 --data_path /cluster/umoja/aminebdj/datasets/ABO/abo-benchmark-material --gt_path /cluster/umoja/aminebdj/datasets/ABO/abo_500/filtered_product_weights.json --val_path /cluster/umoja/aminebdj/datasets/ABO/abo_500/scenes
+python train.py --num_epochs 1000 --experiment_name clip_ft_maple --overfit False --batch_size 128 --data_path /cluster/umoja/aminebdj/datasets/ABO/abo-benchmark-material --gt_path /cluster/umoja/aminebdj/datasets/ABO/abo_500/filtered_product_weights.json --val_path /cluster/umoja/aminebdj/datasets/ABO/abo_500/scenes
