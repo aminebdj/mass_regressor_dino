@@ -121,6 +121,6 @@ class ABO_DATASET(Dataset):
         if self.split == 'train' and self.transform_in:
             img_tensor = self.transform(img_tensor)
 
-        # prob = self.sample_to_prob[sample_id] if self.return_probs else self.sample_to_mass[sample_id]
-        prob = self.sample_to_mass[sample_id]
+        prob = self.sample_to_prob[sample_id] if self.return_probs else self.sample_to_mass[sample_id]
+        # prob = self.sample_to_mass[sample_id]
         return {'image': img_tensor}, torch.tensor([prob, 1 - prob])
