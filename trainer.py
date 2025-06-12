@@ -9,6 +9,8 @@ from datetime import datetime
 import torch.nn as nn
 import torch.nn.functional as F
 import matplotlib.pyplot as plt
+num_workers = max(os.cpu_count() - 1, 1)  # Ensure at least 1 worker
+
 import numpy as np
 def save_preds_gt(validation_gt, validation_preds, epoch, save_figres_in):
 
@@ -147,8 +149,8 @@ def train(data_path,gt_path,val_path,device='cuda', batch_size=8, save_best_mode
     train_dataset = ABO_DATASET(split='train', overfit=overfit, path_to_dataset=data_path, val_path=val_path, path_to_annotations=gt_path)
     val_dataset = ABO_DATASET(split='val', overfit=overfit, path_to_dataset=data_path, val_path=val_path, path_to_annotations=gt_path)
     # train_dataset[0]
-    train_dataloader = DataLoader(train_dataset, batch_size=batch_size, num_workers=11, shuffle=True)
-    val_dataloader = DataLoader(val_dataset, batch_size=1, num_workers=11, shuffle=False)
+    train_dataloader = DataLoader(train_dataset, batch_size=batch_size, num_workers=num_workers-1, shuffle=True)
+    val_dataloader = DataLoader(val_dataset, batch_size=1, num_workers=num_workers-1, shuffle=False)
 
     # best_val_loss = float('inf')
 
