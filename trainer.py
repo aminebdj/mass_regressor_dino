@@ -122,8 +122,8 @@ def evaluate(maple_trainer, dataloader, device, num_images=3):
             # Compute loss using mass weighting
             min_mass = dataloader.dataset.min_w
             max_mass = dataloader.dataset.max_w
-            pred_mass = preds[:, 0] * min_mass + (1 - preds[:, 0]) * max_mass
-            target_mass = tragets_ext[:, 0] * min_mass + (1 - tragets_ext[:, 0]) * max_mass
+            pred_mass = preds[:, 0]*(max_mass-min_mass) + min_mass
+            target_mass = tragets_ext[:, 0]*(max_mass-min_mass) + min_mass
 
             loss = (pred_mass - target_mass).abs().sum()
             validation_gt += target_mass.cpu().tolist() 
@@ -147,8 +147,8 @@ def train(data_path,gt_path,val_path,device='cuda', batch_size=8, save_best_mode
     train_dataset = ABO_DATASET(split='train', overfit=overfit, path_to_dataset=data_path, val_path=val_path, path_to_annotations=gt_path)
     val_dataset = ABO_DATASET(split='val', overfit=overfit, path_to_dataset=data_path, val_path=val_path, path_to_annotations=gt_path)
     # train_dataset[0]
-    train_dataloader = DataLoader(train_dataset, batch_size=batch_size, num_workers=8, shuffle=True)
-    val_dataloader = DataLoader(val_dataset, batch_size=1, num_workers=8, shuffle=False)
+    train_dataloader = DataLoader(train_dataset, batch_size=batch_size, num_workers=11, shuffle=True)
+    val_dataloader = DataLoader(val_dataset, batch_size=1, num_workers=11, shuffle=False)
 
     # best_val_loss = float('inf')
 

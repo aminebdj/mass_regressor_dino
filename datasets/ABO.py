@@ -30,7 +30,7 @@ def load_json(filepath):
     return data
 def fast_image_loader(path):
     with open(path, 'rb') as f:
-        img = Image.open(f).convert('RGB')
+        img = Image.open(f).convert('RGB').copy()
     return np.array(img)
 def expand_array(input_array, k):
     n_needed = k - input_array.shape[0]  # number of additional slices
@@ -121,5 +121,6 @@ class ABO_DATASET(Dataset):
         if self.split == 'train' and self.transform_in:
             img_tensor = self.transform(img_tensor)
 
-        prob = self.sample_to_prob[sample_id] if self.return_probs else self.sample_to_mass[sample_id]
+        # prob = self.sample_to_prob[sample_id] if self.return_probs else self.sample_to_mass[sample_id]
+        prob = self.sample_to_mass[sample_id]
         return {'image': img_tensor}, torch.tensor([prob, 1 - prob])
