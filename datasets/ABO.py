@@ -28,6 +28,10 @@ def load_json(filepath):
     with open(filepath, 'r', encoding='utf-8') as file:
         data = json.load(file)
     return data
+def fast_image_loader(path):
+    with open(path, 'rb') as f:
+        img = Image.open(f).convert('RGB')
+    return np.array(img)
 def expand_array(input_array, k):
     n_needed = k - input_array.shape[0]  # number of additional slices
     indices = torch.randint(0, input_array.shape[0], (n_needed,))  # randomly pick indices to repeat
@@ -90,67 +94,32 @@ class ABO_DATASET(Dataset):
         # Get list of files (assuming all folders have same files in same order)
         self.file_list = split_to_file[split]
         self.file_list = split_to_file['val'][:2] if overfit else self.file_list 
+        self.sample_to_paths = {}
+        for sample_id in self.file_list:
+            sample_dir = os.path.join(self.base_path, sample_id)
+            img_dir = os.path.join(sample_dir, self.required_folders['images'])
+            img_paths = sorted([
+                os.path.join(dp, f)
+                for dp, _, fn in os.walk(img_dir)
+                for f in fn if f.endswith(('.png', '.jpg'))
+            ], key=lambda x: int(os.path.basename(x).split('_')[-1].split('.')[0]))
+            self.sample_to_paths[sample_id] = img_paths
     def __len__(self):
         return len(self.file_list)
-    
     def __getitem__(self, idx):
-        if torch.is_tensor(idx):
-            idx = idx.tolist()
-            
-        base_filename = os.path.splitext(self.file_list[idx])[0]
-        # Load PNG images
-        def load_png(subfolder, masks = None, frame_indices=None):
-            path = os.path.join(self.base_path, base_filename, self.required_folders[subfolder])
-            path_to_data = [os.path.join(path, root, fname) for root, _, fnames in os.walk(path) for fname in fnames if fname.endswith('.jpg') or fname.endswith('.png') ]
-            # print(len(path_to_data))
-
-            sorted_indices = sorted(range(len(path_to_data)), key=lambda i: int(path_to_data[i].split("_")[1].split('.')[0]))
-            path_to_data = [path_to_data[i] for i in sorted_indices]
-
-            num_samples = len(path_to_data) if self.num_images == -1 else self.num_images
-            frame_indices = random.sample(range(len(path_to_data)), num_samples) if frame_indices is None else frame_indices
-            path_to_data = [path for path in path_to_data if int(os.path.basename(path).split('.')[0].split('_')[-1]) in frame_indices]
-            imgs = np.stack([np.array(Image.open(path)) for path in  path_to_data])
-            
-
-            if masks is not None:
-                expen = len(imgs)//len(masks)
-                expanded_masks = np.repeat(masks, expen, axis=0)[:len(imgs)]
-                imgs = imgs*expanded_masks[..., None]
-                if len(imgs) != num_samples*3:
-                    imgs_additional = expand_array(imgs, num_samples*3)
-                    imgs = np.concatenate([imgs, imgs_additional])
-            return imgs, frame_indices
+        sample_id = self.file_list[idx]
+        img_paths = self.sample_to_paths[sample_id]
+        num_samples = self.num_images if self.num_images != -1 else len(img_paths)
+        frame_indices = random.sample(range(len(img_paths)), num_samples)
+        selected_paths = [img_paths[i] for i in frame_indices]
         
-        # # Load EXR depth
-        # def load_exr():
-        #     path = os.path.join(self.base_path, self.required_folders['depth'], f"{base_filename}.exr")
-        #     depths = np.stack([exr.read(os.path.join(path, fname) for fname in os.listdir(path))])
-        #     return depths  # Adjust based on your EXR library
+        imgs = np.stack([fast_image_loader(p) for p in selected_paths])
         
-        # Load all data
-        masks, frame_indices = load_png('masks')
-        masks = masks > 125
-        image, _ = load_png('images', masks, frame_indices=frame_indices)
-        # normal = load_png('normals', masks)
-        # metallic_roughness = load_png('metallic_roughness', masks)
-        # render = load_png('render', masks)
-        # depth = load_exr()
+        img_tensor = torch.from_numpy(imgs).float().permute(0, 3, 1, 2) / 255.0
+        img_tensor = resize_to_patch_multiple(img_tensor)
         
-        # Convert to tensors
-        img_tensor = resize_to_patch_multiple(torch.from_numpy(image).float().permute(0,3, 1, 2) / 255.0)
         if self.split == 'train' and self.transform_in:
             img_tensor = self.transform(img_tensor)
-        sample = {
-            'image': img_tensor,
-            # 'masks': masks,
-            # 'normal': torch.from_numpy(normal).float().permute(0,3, 1, 2) / 255.0,
-            # 'metallic_roughness': torch.from_numpy(metallic_roughness).float().permute(0,3, 1, 2) / 255.0,
-            # 'render': torch.from_numpy(render).float().permute(0,3, 1, 2) / 255.0,
-            # 'depth': torch.from_numpy(depth).float().unsqueeze(1)  # Add channel dimension
-        }
-        
-        
-        
-        target_label = self.sample_to_prob[self.file_list[idx]] if self.return_probs else self.sample_to_mass[self.file_list[idx]]
-        return sample, torch.tensor([target_label,1-target_label ])
+
+        prob = self.sample_to_prob[sample_id] if self.return_probs else self.sample_to_mass[sample_id]
+        return {'image': img_tensor}, torch.tensor([prob, 1 - prob])

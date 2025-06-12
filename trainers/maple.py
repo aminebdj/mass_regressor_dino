@@ -14,7 +14,7 @@ from dassl.optim import build_optimizer, build_lr_scheduler
 
 from clip import clip
 from clip.simple_tokenizer import SimpleTokenizer as _Tokenizer
-
+# from models.models_3d.minkowski_encoder import MinkowskiFCNN
 _tokenizer = _Tokenizer()
 
 
@@ -186,6 +186,7 @@ class CustomCLIP(nn.Module):
         self.text_encoder = TextEncoder(clip_model)
         self.logit_scale = clip_model.logit_scale
         self.dtype = clip_model.dtype
+        # self.encoder_3d = MinkowskiFCNN()
 
     def forward(self, image):
         B, N, C, H, W = image.shape  # For batch processing of multiple images per sample
@@ -204,7 +205,6 @@ class CustomCLIP(nn.Module):
         logits = logit_scale * image_features @ text_features.t()
         # log_probs = F.softmax(logits, dim=1)
         return logits
-
 
 def _get_clones(module, N):
     return nn.ModuleList([copy.deepcopy(module) for i in range(N)])

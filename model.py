@@ -116,48 +116,7 @@ class MaPLe():
             load_pretrained_weights(self.model, cfg.MODEL.INIT_WEIGHTS)
 
         self.model.to(self.device)
-        # NOTE: only give prompt_learner to the optimizer
-        self.optim = build_optimizer(self.model, cfg.OPTIM)
-        self.sched = build_lr_scheduler(self.optim, cfg.OPTIM)
-        # self.register_model("MultiModalPromptLearner", self.model, self.optim, self.sched)
-
-        self.scaler = GradScaler() if cfg.TRAINER.MAPLE.PREC == "amp" else None
-
-        # Note that multi-gpu training could be slow because CLIP's size is
-        # big, which slows down the copy operation in DataParallel
-        device_count = torch.cuda.device_count()
-        if device_count > 1:
-            print(f"Multiple GPUs detected (n_gpus={device_count}), use all of them!")
-            self.model = nn.DataParallel(self.model)
-
-    def forward_backward(self, image):
-        # image, label = batch
-
-        model = self.model
-        optim = self.optim
-        scaler = self.scaler
-
-        prec = self.cfg.TRAINER.MAPLE.PREC
-        if prec == "amp":
-            with autocast():
-                loss = model(image, label)
-            optim.zero_grad()
-            scaler.scale(loss).backward()
-            scaler.step(optim)
-            scaler.update()
-        else:
-            loss = model(image)
-            optim.zero_grad()
-            loss.backward()
-            optim.step()
-
-        loss_summary = {"loss": loss.item()}
-
-        if (self.batch_idx + 1) == self.num_batches:
-            self.update_lr()
-
-        return loss_summary
-
+    
     def load_model(self, directory, epoch=None):
         if not directory:
             print("Note that load_model() is skipped as no pretrained model is given")

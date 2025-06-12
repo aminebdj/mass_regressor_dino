@@ -17,7 +17,7 @@ if __name__ == '__main__':
     # parser.add_argument('--checkpoint', type='', default='', help='Number of training epochs')
     parser.add_argument('--tune_blocks', type=list, default=['layer4'], help='Number of training epochs')
 
-    args = parser.parse_args()
+    args = parser.parse_args() 
 
     train(
         device=args.device,
