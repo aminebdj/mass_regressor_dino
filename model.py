@@ -75,8 +75,9 @@ class Regressor(nn.Module):
 
 
 # @TRAINER_REGISTRY.register()
-class MaPLe():
+class MaPLe(nn.Module):
     def __init__(self):
+        super(MaPLe, self).__init__()
         self.device = device
         self.cfg = setup_cfg()
         self.build_model(self.cfg)
@@ -98,12 +99,18 @@ class MaPLe():
         name_to_update = "prompt_learner"
         self.optim = build_optimizer(self.model, cfg.OPTIM)
         for name, param in self.model.named_parameters():
+            # if 'transformer.resblocks.11' in name:
+            if name_to_update not in name:
+                param.requires_grad = False
+        for name, param in self.model.named_parameters():
+            if 'transformer.resblocks' in name:
+                param.requires_grad = True
             if name_to_update not in name:
                 # Make sure that VPT prompts are updated
                 if "VPT" in name:
                     param.requires_grad_(True)
-                else:
-                    param.requires_grad_(False)
+                # else:
+                #     param.requires_grad_(False)
 
         # Double check
         enabled = set()

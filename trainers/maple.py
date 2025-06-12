@@ -71,6 +71,8 @@ class MultiModalPromptLearner(nn.Module):
         super().__init__()
         n_cls = len(classnames)
         n_ctx = cfg.TRAINER.MAPLE.N_CTX
+        # print(cfg.TRAINER.MAPLE.N_CTX)
+        # exit()
         ctx_init = cfg.TRAINER.MAPLE.CTX_INIT
         dtype = clip_model.dtype
         ctx_dim = clip_model.ln_final.weight.shape[0]
