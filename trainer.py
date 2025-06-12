@@ -190,7 +190,7 @@ def train(data_path,gt_path,val_path,device='cuda', batch_size=8, save_best_mode
 
             logits = maple_trainer.model(images)
             tragets_ext = targets.repeat_interleave(images.shape[1], dim=0)
-            loss = 20*soft_cross_entropy(logits, tragets_ext)
+            loss = 20*soft_cross_entropy(logits.float(), tragets_ext.float())
 
             maple_trainer.optim.zero_grad()
             loss.backward()
