@@ -160,7 +160,7 @@ def train(data_path,gt_path,val_path,device='cuda', batch_size=8, save_best_mode
         maple_trainer.model.train()
         running_train_loss = 0.0
         num_images = 0
-        val_loss, validation_gt, validation_preds = evaluate(maple_trainer, val_dataloader, device)
+        # val_loss, validation_gt, validation_preds = evaluate(maple_trainer, val_dataloader, device)
         
         for data, targets in tqdm(train_dataloader):
             images = data['image']
