@@ -96,7 +96,7 @@ class MaPLe():
 
         print("Turning off gradients in both the image and the text encoder")
         name_to_update = "prompt_learner"
-
+        self.optim = build_optimizer(self.model, cfg.OPTIM)
         for name, param in self.model.named_parameters():
             if name_to_update not in name:
                 # Make sure that VPT prompts are updated
