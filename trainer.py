@@ -86,31 +86,13 @@ def save_preds_gt(validation_gt, validation_preds, epoch, save_figres_in):
     plt.savefig(save_figres_in.replace('.png', '_sorted.png'))
     plt.close()
     
-def soft_cross_entropy(logits, target_probs, reduction='mean'):
-    """
-    logits: (batch_size, num_classes)
-    target_probs: (batch_size, num_classes) - soft label distribution
-    """
-    log_probs = F.log_softmax(logits, dim=1)
-    loss = -(target_probs * log_probs).sum(dim=1)
-
-    if reduction == 'mean':
-        return loss.mean()
-    elif reduction == 'sum':
-        return loss.sum()
-    else:
-        return loss
-
 # def soft_cross_entropy(logits, target_probs, reduction='mean'):
 #     """
 #     logits: (batch_size, num_classes)
 #     target_probs: (batch_size, num_classes) - soft label distribution
 #     """
 #     log_probs = F.log_softmax(logits, dim=1)
-    
-#     # KL divergence: KL(target || predicted)
-#     loss = F.kl_div(log_probs[:,0], target_probs[:, 0], reduction='mean')
-#     return loss
+#     loss = -(target_probs * log_probs).sum(dim=1)
 
 #     if reduction == 'mean':
 #         return loss.mean()
@@ -118,6 +100,24 @@ def soft_cross_entropy(logits, target_probs, reduction='mean'):
 #         return loss.sum()
 #     else:
 #         return loss
+
+def soft_cross_entropy(logits, target_probs, reduction='mean'):
+    """
+    logits: (batch_size, num_classes)
+    target_probs: (batch_size, num_classes) - soft label distribution
+    """
+    log_probs = F.log_softmax(logits, dim=1)
+    
+    # KL divergence: KL(target || predicted)
+    loss = F.kl_div(log_probs, target_probs, reduction='batchmean')
+    return loss
+
+    # if reduction == 'mean':
+    #     return loss.mean()
+    # elif reduction == 'sum':
+    #     return loss.sum()
+    # else:
+    #     return loss
 
 def evaluate(maple_trainer, dataloader, device, num_images=3):
     maple_trainer.model.eval()
