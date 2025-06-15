@@ -166,9 +166,12 @@ class MaPLe(nn.Module):
         print("Turning off gradients in both the image and the text encoder")
         name_to_update = "prompt_learner"
         self.optim = build_optimizer(self.model, cfg.OPTIM)
+        # for name, param in self.model.named_parameters():
+        #     print(name)
+        # exit()
         for name, param in self.model.named_parameters():
             # if 'transformer.resblocks.11' in name:
-            if name_to_update not in name and name_to_update not in 'mink_encoder':
+            if name_to_update not in name and 'mink_encoder' not in name:
                 param.requires_grad = False
         for name, param in self.model.named_parameters():
             # if 'mlp' in name:

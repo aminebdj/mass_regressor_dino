@@ -222,8 +222,8 @@ class CustomCLIP(nn.Module):
         image_features = self.image_encoder(image.type(self.dtype), shared_ctx, deep_compound_prompts_vision)
         # image_features = self.image_encoder(image.type(self.dtype))
         feature_3d = self.mink_encoder(sparse_input)
-        print(feature_3d)
-        exit()
+        # print(feature_3d)
+        # exit()
         image_features = image_features+feature_3d.repeat_interleave(N, dim=0)  # shape: (B*N, C)
         image_features = image_features / image_features.norm(dim=-1, keepdim=True)
         text_features = text_features / text_features.norm(dim=-1, keepdim=True)
@@ -257,7 +257,7 @@ class MaPLe(TrainerX):
 
         print("Turning off gradients in both the image and the text encoder")
         name_to_update = "prompt_learner"
-
+        print(self.model.named_parameters())
         for name, param in self.model.named_parameters():
             if name_to_update not in name:
                 # Make sure that VPT prompts are updated
