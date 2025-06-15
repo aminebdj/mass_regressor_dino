@@ -113,6 +113,10 @@ class ABO_DATASET(Dataset):
         # Get list of files (assuming all folders have same files in same order)
         self.file_list = split_to_file[split]
         self.file_list = split_to_file['val'][:1] if overfit else self.file_list 
+        self.corr_property_values = np.array([
+            w/1000
+            for w in range(100, 400_001, 100)
+        ])
         self.sample_to_paths = {}
         for sample_id in self.file_list:
             sample_dir = os.path.join(self.base_path, sample_id)
@@ -162,8 +166,10 @@ class ABO_DATASET(Dataset):
         if self.split == 'train' and self.transform_in:
             img_tensor = self.transform(img_tensor)
 
-        prob = self.sample_to_prob[sample_id] if self.return_probs else self.sample_to_mass[sample_id]
+        # prob = self.sample_to_prob[sample_id] if self.return_probs else self.sample_to_mass[sample_id]
+        target_mass = self.sample_to_mass[sample_id]
+        class_idx = np.argmin(np.abs(self.corr_property_values-target_mass))
         # prob = self.sample_to_mass[sample_id]
         # print(prob)
         # exit()
-        return quantized_coords, feats, {'image': img_tensor}, torch.tensor([prob, 1 - prob])
+        return quantized_coords, feats, {'image': img_tensor}, torch.tensor([class_idx]),  torch.tensor([target_mass])

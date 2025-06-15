@@ -16,13 +16,15 @@ def collate_fn(batch):
     all_feats = []
     all_images = []
     all_targets = []
+    all_targets_mass = []
     for b_id, b_item in enumerate(batch):
-        quantized_coords, feats, images, target_labels = b_item
+        quantized_coords, feats, images, target_labels, target_mass = b_item
         all_coords.append(quantized_coords)
         all_feats.append(feats)
         all_images.append(images['image'])
         all_targets.append(target_labels)
+        all_targets_mass.append(target_mass)
 
     coordinates, features = ME.utils.sparse_collate(coords = all_coords, feats=all_feats)
 
-    return coordinates, features.float(), {'image': torch.stack(all_images)}, torch.stack(all_targets)
+    return coordinates, features.float(), {'image': torch.stack(all_images)}, torch.stack(all_targets), torch.stack(all_targets_mass)

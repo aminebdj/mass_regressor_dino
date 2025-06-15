@@ -151,7 +151,15 @@ class MaPLe(nn.Module):
         self.sched = torch.optim.lr_scheduler.StepLR(self.optim, step_size=cfg.OPTIM.STEP_SIZE, gamma=cfg.OPTIM.GAMMA)
         self.register_model("MultiModalPromptLearner", self.model, self.optim, self.sched)
     def build_model(self, cfg):
-        classnames = ['light', 'heavy']
+        self.classnames = [
+            f"An object with weight {w}g"
+            for w in range(100, 400_001, 100)
+        ]
+        
+        self.corr_property_values = np.array([
+            w/1000
+            for w in range(100, 400_001, 100)
+        ])
 
         print(f"Loading CLIP (backbone: {cfg.MODEL.BACKBONE.NAME})")
         clip_model = load_clip_to_cpu(cfg)
@@ -161,7 +169,7 @@ class MaPLe(nn.Module):
             clip_model.float()
 
         print("Building custom CLIP")
-        self.model = CustomCLIP(cfg, classnames, clip_model)
+        self.model = CustomCLIP(cfg, self.classnames, clip_model)
 
         print("Turning off gradients in both the image and the text encoder")
         name_to_update = "prompt_learner"

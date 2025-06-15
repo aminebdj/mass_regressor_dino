@@ -127,9 +127,10 @@ def evaluate(maple_trainer, dataloader, device, num_images=3):
     validation_gt = []
     with torch.no_grad():
         num_images = 0
-        for voxels, features, data, targets in dataloader:
+        mass_mapping = dataloader.corr_property_values
+        for voxels, features, data, targets, mass_targets in dataloader:
             images = data['image'].to(device)
-            targets = targets.to(device)
+            mass_targets = mass_targets.cpu()
             all_preds = []
             # Process large image batches in sub-batches to avoid OOM
             # for i in range(0, images.shape[1], b_size):
@@ -140,23 +141,25 @@ def evaluate(maple_trainer, dataloader, device, num_images=3):
             pred_logits = maple_trainer.model(batch, sparse_input)
             # preds = pred_logits
             preds = F.softmax(pred_logits, dim=1)  # still on GPU
+            
             # all_preds.append(preds)
             # preds = torch.cat(all_preds)
             # Extend targets to match number of images (move to CPU as well)
             # tragets_ext = targets.repeat_interleave(images.shape[1], dim=0)
-            tragets_ext = targets
+            
+            
+            
 
             # Compute loss using mass weighting
             min_mass = dataloader.dataset.min_w
             max_mass = dataloader.dataset.max_w
-            pred_mass = preds[:, 0]*(max_mass-min_mass) + min_mass
-            target_mass = tragets_ext[:, 0]*(max_mass-min_mass) + min_mass
-
-            loss = (pred_mass - target_mass).abs().sum()
+            pred_mass = torch.cat([mass_mapping[p_idx] for p_idx in preds.argmax(dim=-1)])
+            
+            loss = (pred_mass - mass_targets).abs().sum()
             # print(preds)
             # print(tragets_ext)
             # exit()
-            validation_gt += target_mass.cpu().tolist() 
+            validation_gt += mass_targets.cpu().tolist() 
             validation_preds += pred_mass.cpu().tolist() 
             total_loss += loss.item()
             # num_images += preds.shape[0]
@@ -193,7 +196,7 @@ def train(data_path,gt_path,val_path, path_to_3d_samples,device='cuda', batch_si
         num_images = 0
         # val_loss, validation_gt, validation_preds = evaluate(maple_trainer, val_dataloader, device)
         
-        for voxels, features, data, targets in tqdm(train_dataloader):
+        for voxels, features, data, targets, mass_targets in tqdm(train_dataloader):
             images = data['image']
             num_images += len(images)
 
@@ -202,11 +205,11 @@ def train(data_path,gt_path,val_path, path_to_3d_samples,device='cuda', batch_si
             targets = targets.to(device)
             sparse_input = ME.SparseTensor(coordinates=voxels.to(device), features=features.to(device))
             logits = maple_trainer.model(images, sparse_input)
-            tragets_ext = targets
+            # tragets_ext = targets
             # tragets_ext = targets.repeat_interleave(images.shape[1], dim=0)
-            loss = soft_cross_entropy(logits, tragets_ext.float())
+            # loss = soft_cross_entropy(logits, tragets_ext.float())
             # loss = 0.001*(logits[:, 0]- tragets_ext[:, 0].float()).abs().mean()
-
+            loss = F.cross_entropy(logits, targets)
             maple_trainer.optim.zero_grad()
             loss.backward()
             maple_trainer.optim.step()
