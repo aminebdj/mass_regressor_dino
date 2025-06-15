@@ -204,9 +204,9 @@ class CustomCLIP(nn.Module):
             
             self.classifier = nn.Sequential(
                 nn.ReLU(inplace=True),     # ReLU activation
-                nn.Linear(100, len(classnames))          # Final linear layer to 2 classes
+                nn.Linear(self.dim, 200)          # Final linear layer to 2 classes
                 )
-
+            
 
         # self.encoder_3d = MinkowskiFCNN()
 
