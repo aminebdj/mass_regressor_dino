@@ -133,7 +133,9 @@ def evaluate(maple_trainer, dataloader, device, num_images=3):
             all_preds = []
             # Process large image batches in sub-batches to avoid OOM
             # for i in range(0, images.shape[1], b_size):
-            batch = images[:, :b_size]  # sub-batch
+            num_images = len(images)
+            
+            batch = images[:, ::(num_images//b_size)]  # sub-batch
             sparse_input = ME.SparseTensor(coordinates=voxels.to(device), features=features.to(device))
             pred_logits = maple_trainer.model(batch, sparse_input)
             # preds = pred_logits
@@ -156,7 +158,7 @@ def evaluate(maple_trainer, dataloader, device, num_images=3):
             total_loss += loss.item()
             num_images += preds.shape[0]
 
-    return total_loss / num_images, validation_gt, validation_preds
+    return total_loss / len(dataloader), validation_gt, validation_preds
 def train(data_path,gt_path,val_path, path_to_3d_samples,device='cuda', batch_size=8, save_best_model_in='./logs', num_epochs=100, overfit=False, backbone='clip', tune_blocks=[]):
 
     # model = Regressor(feature_extractor = backbone, tune_blocks=tune_blocks).to(device)
