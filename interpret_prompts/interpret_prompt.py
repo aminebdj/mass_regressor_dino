@@ -3,8 +3,8 @@ import sys
 import argparse
 import torch
 
-from clip.simple_tokenizer import SimpleTokenizer
-from clip import clip
+from clip_.simple_tokenizer import SimpleTokenizer
+from clip_ import clip
 
 # "ViT-B/16"
 # "RN50"

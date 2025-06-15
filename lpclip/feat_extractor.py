@@ -26,7 +26,7 @@ from dassl.config import get_cfg_default
 from dassl.data.transforms import build_transform
 from dassl.data import DatasetWrapper
 
-import clip
+import clip_
 
 # import pdb; pdb.set_trace()
 
@@ -142,7 +142,7 @@ def main(args):
     ########################################
     #   Setup Network
     ########################################
-    clip_model, _ = clip.load("RN50", "cuda", jit=False)
+    clip_model, _ = clip_.load("RN50", "cuda", jit=False)
     clip_model.eval()
     ###################################################################################################################
     # Start Feature Extractor

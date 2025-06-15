@@ -6,6 +6,10 @@ import numpy as np
 import json
 import random
 import torch.nn.functional as F
+from pathlib import Path
+import volumentations as V
+import albumentations as A
+import MinkowskiEngine as ME
 
 def resize_to_patch_multiple(images, patch_size=14):
     H, W = images.shape[-2], images.shape[-1]
@@ -41,12 +45,24 @@ def expand_array(input_array, k):
 import torchvision.transforms as T
 
 class ABO_DATASET(Dataset):
-    def __init__(self, split = 'train', overfit=False, path_to_dataset='/cluster/umoja/aminebdj/datasets/ABO/abo-benchmark-material', val_path="/cluster/umoja/aminebdj/datasets/ABO/abo_500/scenes", path_to_annotations='/cluster/umoja/aminebdj/datasets/ABO/abo_500/filtered_product_weights.json', return_probs = True):
+    def __init__(self, split = 'train', overfit=False,path_to_3d_samples = '/mnt/ssda/datasets/ABO/raw/3dmodels/preprocessed', path_to_dataset='/cluster/umoja/aminebdj/datasets/ABO/abo-benchmark-material', val_path="/cluster/umoja/aminebdj/datasets/ABO/abo_500/scenes", path_to_annotations='/cluster/umoja/aminebdj/datasets/ABO/abo_500/filtered_product_weights.json', return_probs = True):
         """
         Args:
             base_path (string): Path to the directory containing the subfolders with data.
             transform (callable, optional): Optional transform to be applied to the images.
         """
+            # Load volume augmentations
+        volume_augmentations_path =  './configs/augmentations/volum_augm.yaml'
+        image_augmentations_path = './configs/augmentations/album_aug.yaml'
+        self.volume_augmentations = V.NoOp()
+        self.path_to_3d_samples = path_to_3d_samples
+        if (volume_augmentations_path is not None) and (volume_augmentations_path.lower() != "none"):
+            self.volume_augmentations = V.load(Path(volume_augmentations_path), data_format="yaml")
+
+        # Load image augmentations
+        self.image_augmentations = A.NoOp()
+        if (image_augmentations_path is not None) and (image_augmentations_path.lower() != "none"):
+            self.image_augmentations = A.load(Path(image_augmentations_path), data_format="yaml")
         VAL_SPLIT_PATH = [f.split('_')[0] for f in os.listdir(val_path)]
         self.return_probs = return_probs
         self.base_path = path_to_dataset
@@ -54,6 +70,8 @@ class ABO_DATASET(Dataset):
         masses_list = list(self.sample_to_mass.values())
         self.max_w = max(masses_list)
         self.min_w = min(masses_list)
+        # self.max_w = 1.5
+        # self.min_w = min(masses_list)
         probs = (np.array(masses_list)-self.min_w)/(self.max_w-self.min_w)
         self.sample_to_prob = dict(zip(list(self.sample_to_mass.keys()), list(probs)))
         # exit()
@@ -70,7 +88,7 @@ class ABO_DATASET(Dataset):
         self.transform_in  = False if overfit else True
         self.split = split
         self.num_images = 3 if split=='train' else -1 
-        
+        self.voxel_size = 0.02
         # Verify all required subdirectories exist
         self.required_folders = {
             'images': 'render',
@@ -108,6 +126,28 @@ class ABO_DATASET(Dataset):
         return len(self.file_list)
     def __getitem__(self, idx):
         sample_id = self.file_list[idx]
+        data_3d = np.load(os.path.join(self.path_to_3d_samples, sample_id+'.npy'))
+        points, color = data_3d[:,:3], data_3d[:,6:9]
+        if self.split == 'train':
+            # Apply volume augmentations
+            aug = self.volume_augmentations(
+                points=points,
+                features=color,
+            )
+            points, color= aug["points"], aug["features"]
+            
+            # Apply image augmentations
+            pseudo_image = color.astype(np.uint8)[np.newaxis, :, :]
+            color = np.squeeze(self.image_augmentations(image=pseudo_image)["image"])
+        feats = color/255.
+        quantized_coords, feats, unique_indices, inverse_maps = ME.utils.sparse_quantize(
+            coordinates=points,
+            features=feats,
+            return_inverse=True,
+            return_index=True,
+            quantization_size=self.voxel_size,
+        )
+
         img_paths = self.sample_to_paths[sample_id]
         num_samples = self.num_images if self.num_images != -1 else len(img_paths)
         frame_indices = random.sample(range(len(img_paths)), num_samples)
@@ -123,4 +163,5 @@ class ABO_DATASET(Dataset):
 
         prob = self.sample_to_prob[sample_id] if self.return_probs else self.sample_to_mass[sample_id]
         # prob = self.sample_to_mass[sample_id]
-        return {'image': img_tensor}, torch.tensor([prob, 1 - prob])
+
+        return quantized_coords, feats, {'image': img_tensor}, torch.tensor([prob, 1 - prob])

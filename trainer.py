@@ -3,15 +3,18 @@ import os
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
 from datasets.ABO import ABO_DATASET
-from model import Regressor, MaPLe
+from datasets.collate_function import collate_fn
+from model import Regressor, MaPLe, Classifier
 from tqdm import tqdm
 from datetime import datetime
 import torch.nn as nn
 import torch.nn.functional as F
 import matplotlib.pyplot as plt
 num_workers = max(os.cpu_count() - 1, 1)  # Ensure at least 1 worker
+import MinkowskiEngine as ME
 
 import numpy as np
+
 def save_preds_gt(validation_gt, validation_preds, epoch, save_figres_in):
 
     # Convert to NumPy arrays
@@ -83,30 +86,13 @@ def save_preds_gt(validation_gt, validation_preds, epoch, save_figres_in):
     plt.savefig(save_figres_in.replace('.png', '_sorted.png'))
     plt.close()
     
-# def soft_cross_entropy(logits, target_probs, reduction='mean'):
-#     """
-#     logits: (batch_size, num_classes)
-#     target_probs: (batch_size, num_classes) - soft label distribution
-#     """
-#     log_probs = F.log_softmax(logits, dim=1)
-#     loss = -(target_probs * log_probs).sum(dim=1)
-
-#     if reduction == 'mean':
-#         return loss.mean()
-#     elif reduction == 'sum':
-#         return loss.sum()
-#     else:
-#         return loss
-
 def soft_cross_entropy(logits, target_probs, reduction='mean'):
     """
     logits: (batch_size, num_classes)
     target_probs: (batch_size, num_classes) - soft label distribution
     """
     log_probs = F.log_softmax(logits, dim=1)
-    
-    # KL divergence: KL(target || predicted)
-    loss = F.kl_div(log_probs, target_probs, reduction='none').sum(dim=1)
+    loss = -(target_probs * log_probs).sum(dim=1)
 
     if reduction == 'mean':
         return loss.mean()
@@ -114,6 +100,24 @@ def soft_cross_entropy(logits, target_probs, reduction='mean'):
         return loss.sum()
     else:
         return loss
+
+# def soft_cross_entropy(logits, target_probs, reduction='mean'):
+#     """
+#     logits: (batch_size, num_classes)
+#     target_probs: (batch_size, num_classes) - soft label distribution
+#     """
+#     log_probs = F.log_softmax(logits, dim=1)
+    
+#     # KL divergence: KL(target || predicted)
+#     loss = F.kl_div(log_probs[:,0], target_probs[:, 0], reduction='mean')
+#     return loss
+
+#     if reduction == 'mean':
+#         return loss.mean()
+#     elif reduction == 'sum':
+#         return loss.sum()
+#     else:
+#         return loss
 
 def evaluate(maple_trainer, dataloader, device, num_images=3):
     maple_trainer.model.eval()
@@ -123,14 +127,16 @@ def evaluate(maple_trainer, dataloader, device, num_images=3):
     validation_gt = []
     with torch.no_grad():
         num_images = 0
-        for data, targets in dataloader:
+        for voxels, features, data, targets in dataloader:
             images = data['image'].to(device)
             targets = targets.to(device)
             all_preds = []
             # Process large image batches in sub-batches to avoid OOM
             for i in range(0, images.shape[1], b_size):
                 batch = images[:, i:i + b_size]  # sub-batch
-                pred_logits = maple_trainer.model(batch)
+                sparse_input = ME.SparseTensor(coordinates=voxels.to(device), features=features.to(device))
+                pred_logits = maple_trainer.model(batch, sparse_input)
+                # preds = pred_logits
                 preds = F.softmax(pred_logits, dim=1)  # still on GPU
                 all_preds.append(preds)
             preds = torch.cat(all_preds)
@@ -150,7 +156,7 @@ def evaluate(maple_trainer, dataloader, device, num_images=3):
             num_images += preds.shape[0]
 
     return total_loss / num_images, validation_gt, validation_preds
-def train(data_path,gt_path,val_path,device='cuda', batch_size=8, save_best_model_in='./logs', num_epochs=100, overfit=False, backbone='clip', tune_blocks=[]):
+def train(data_path,gt_path,val_path, path_to_3d_samples,device='cuda', batch_size=8, save_best_model_in='./logs', num_epochs=100, overfit=False, backbone='clip', tune_blocks=[]):
 
     # model = Regressor(feature_extractor = backbone, tune_blocks=tune_blocks).to(device)
     maple_trainer = MaPLe()
@@ -162,11 +168,11 @@ def train(data_path,gt_path,val_path,device='cuda', batch_size=8, save_best_mode
     log_path = os.path.join(save_best_model_in, 'log.txt')
 
 
-    train_dataset = ABO_DATASET(split='train', overfit=overfit, path_to_dataset=data_path, val_path=val_path, path_to_annotations=gt_path)
-    val_dataset = ABO_DATASET(split='val', overfit=overfit, path_to_dataset=data_path, val_path=val_path, path_to_annotations=gt_path)
+    train_dataset = ABO_DATASET(split='train', overfit=overfit, path_to_3d_samples=path_to_3d_samples, path_to_dataset=data_path, val_path=val_path, path_to_annotations=gt_path)
+    val_dataset = ABO_DATASET(split='val', overfit=overfit, path_to_3d_samples=path_to_3d_samples, path_to_dataset=data_path, val_path=val_path, path_to_annotations=gt_path)
     # train_dataset[0]
-    train_dataloader = DataLoader(train_dataset, batch_size=batch_size, num_workers=11, shuffle=True)
-    val_dataloader = DataLoader(val_dataset, batch_size=1, num_workers=11, shuffle=False)
+    train_dataloader = DataLoader(train_dataset, batch_size=batch_size, num_workers=11, shuffle=True, collate_fn=collate_fn)
+    val_dataloader = DataLoader(val_dataset, batch_size=1, num_workers=11, shuffle=False, collate_fn=collate_fn)
 
     # best_val_loss = float('inf')
 
@@ -180,17 +186,18 @@ def train(data_path,gt_path,val_path,device='cuda', batch_size=8, save_best_mode
         num_images = 0
         # val_loss, validation_gt, validation_preds = evaluate(maple_trainer, val_dataloader, device)
         
-        for data, targets in tqdm(train_dataloader):
+        for voxels, features, data, targets in tqdm(train_dataloader):
             images = data['image']
             num_images += len(images)
 
             # continue
             images = images.to(device)
             targets = targets.to(device)
-
-            logits = maple_trainer.model(images)
+            sparse_input = ME.SparseTensor(coordinates=voxels.to(device), features=features.to(device))
+            logits = maple_trainer.model(images, sparse_input)
             tragets_ext = targets.repeat_interleave(images.shape[1], dim=0)
-            loss = 20*soft_cross_entropy(logits.float(), tragets_ext.float())
+            loss = 0.1*soft_cross_entropy(logits, tragets_ext.float())
+            # loss = (logits[:, 0]- tragets_ext[:, 0].float()).abs().mean()
 
             maple_trainer.optim.zero_grad()
             loss.backward()
@@ -199,7 +206,7 @@ def train(data_path,gt_path,val_path,device='cuda', batch_size=8, save_best_mode
 
             # maple_trainer.optim.update_lr()
             running_train_loss += loss.item()
-            print(f"Step {step+1}: Train Loss = {loss.item():.4f}")
+            # print(f"Step {step+1}: Train Loss = {loss.item():.4f}")
         if epoch % 10 == 0:
             avg_train_loss = running_train_loss / num_images
             val_loss, validation_gt, validation_preds = evaluate(maple_trainer, val_dataloader, device)
@@ -211,6 +218,7 @@ def train(data_path,gt_path,val_path,device='cuda', batch_size=8, save_best_mode
             # Append losses to log file
             with open(log_path, 'a') as log_file:
                 log_file.write(f"{epoch+1},{avg_train_loss:.4f},{val_loss:.4f}\n")
+
 
         # # Save best model
         # if val_loss < best_val_loss:

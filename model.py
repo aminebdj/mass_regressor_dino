@@ -15,8 +15,65 @@ import os.path as osp
 from dassl.config import get_cfg_default
 
 from trainers.maple import CustomCLIP, load_clip_to_cpu
+import clip
+
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 # 1. Load model
+
+class Classifier(nn.Module):
+    def __init__(self, hidden_dim=256, device='cuda'):
+        super(Classifier, self).__init__()
+        self.device = device
+        self.feature_extractor_name = 'clip'
+
+        # Load CLIP RN50
+        self.feature_extractor, _ = clip.load("RN50", device=device)
+        self.feature_extractor.eval()
+        self.input_dim = 1024  # RN50 CLIP output dim
+
+        # Freeze all CLIP parameters
+        for param in self.feature_extractor.parameters():
+            param.requires_grad = False
+
+        # # Unfreeze only the first transformer block (layer 0)
+        # layer_0 = self.feature_extractor.visual.transformer.resblocks[0]
+        # for param in layer_0.parameters():
+        #     param.requires_grad = True
+        # for name, param in self.feature_extractor.visual.named_parameters():
+        #     if 'layer4' in name:
+        #         param.requires_grad = True
+        #     else:
+        #         param.requires_grad = False
+        # Projection head (optional, can be identity)
+        # self.projection = nn.Sequential(
+        #     nn.Linear(self.input_dim, hidden_dim),
+        #     nn.ReLU(),
+        #     nn.Linear(hidden_dim, self.input_dim)
+        # ).to(device)
+
+        # Precompute text features for "light" and "heavy"
+        with torch.no_grad():
+            texts = clip.tokenize(["a light object", "a heavy object"]).to(device)
+            self.text_features = self.feature_extractor.encode_text(texts)  # (2, 1024)
+            self.text_features = self.text_features / self.text_features.norm(dim=-1, keepdim=True)
+
+        self.preprocess = transforms.Compose([
+            transforms.Resize(224),
+            transforms.CenterCrop(224),
+        ])
+
+    def forward(self, images):
+        B, N, C, H, W = images.shape
+        images = images.view(B * N, C, H, W).to(self.device)
+
+        image_features = self.feature_extractor.encode_image(self.preprocess(images)).float() # (B*N, 1024)
+        # image_features = self.projection(image_features.float())      # (B*N, 1024)
+        image_features = image_features / image_features.norm(dim=-1, keepdim=True)
+
+        # Cosine similarity with each text feature (dot product, since vectors are normalized)
+        logits = image_features @ self.text_features.float().T               # (B*N, 2)
+
+        return logits
 class Regressor(nn.Module):
     def __init__(self, feature_extractor='dino', hidden_dim=256, device=device, tune_blocks = []):
         super(Regressor, self).__init__()
@@ -27,8 +84,8 @@ class Regressor(nn.Module):
             self.feature_extractor = torch.hub.load('facebookresearch/dinov2', 'dinov2_vits14').eval().to(device)
             self.input_dim = 384  # For dinov2_vits14
         elif feature_extractor == 'clip':
-            import clip
-            self.feature_extractor, _ = clip.load("RN50", device=device)
+            import clip_
+            self.feature_extractor, _ = clip_.load("RN50", device=device)
             self.feature_extractor.eval()
             self.input_dim = 1024  # CLIP ViT-B/32 output dim
             # Freeze all CLIP parameters
@@ -72,6 +129,7 @@ class Regressor(nn.Module):
         # out = out.view(B, N)  # Return per-sample predictions if needed
         return out.squeeze()
     
+import torch.optim as optim
 
 
 # @TRAINER_REGISTRY.register()
@@ -81,7 +139,17 @@ class MaPLe(nn.Module):
         self.device = device
         self.cfg = setup_cfg()
         self.build_model(self.cfg)
-
+        # self.build_classifier()
+    def build_classifier(self):
+        self.model = Classifier()
+        cfg = self.cfg
+        cfg.OPTIM.LR = 1e-4
+        cfg.OPTIM.WEIGHT_DECAY = 1e-4
+        cfg.OPTIM.STEP_SIZE = 30
+        cfg.OPTIM.GAMMA = 0.1
+        self.optim = optim.Adam(self.model.parameters(), lr=cfg.OPTIM.LR, weight_decay=cfg.OPTIM.WEIGHT_DECAY)
+        self.sched = torch.optim.lr_scheduler.StepLR(self.optim, step_size=cfg.OPTIM.STEP_SIZE, gamma=cfg.OPTIM.GAMMA)
+        self.register_model("MultiModalPromptLearner", self.model, self.optim, self.sched)
     def build_model(self, cfg):
         classnames = ['light', 'heavy']
 
@@ -103,8 +171,8 @@ class MaPLe(nn.Module):
             if name_to_update not in name:
                 param.requires_grad = False
         for name, param in self.model.named_parameters():
-            if 'transformer.resblocks' in name:
-                param.requires_grad = True
+            # if 'mlp' in name:
+            param.requires_grad = True
             if name_to_update not in name:
                 # Make sure that VPT prompts are updated
                 if "VPT" in name:
