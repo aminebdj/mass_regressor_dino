@@ -111,7 +111,7 @@ class ABO_DATASET(Dataset):
 
         # Get list of files (assuming all folders have same files in same order)
         self.file_list = split_to_file[split]
-        self.file_list = split_to_file['val'][:2] if overfit else self.file_list 
+        self.file_list = split_to_file['val'][:1] if overfit else self.file_list 
         self.sample_to_paths = {}
         for sample_id in self.file_list:
             sample_dir = os.path.join(self.base_path, sample_id)
