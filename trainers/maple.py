@@ -224,7 +224,7 @@ class CustomCLIP(nn.Module):
         feature_3d = self.mink_encoder(sparse_input, multi_level_clip_feats, N)
         # print(feature_3d)
         # exit()
-        image_features = image_features+feature_3d.repeat_interleave(N, dim=0)  # shape: (B*N, C)
+        image_features = feature_3d.repeat_interleave(N, dim=0)  # shape: (B*N, C)
         image_features = image_features / image_features.norm(dim=-1, keepdim=True)
         text_features = text_features / text_features.norm(dim=-1, keepdim=True)
         logits = logit_scale*image_features @ text_features.t()
