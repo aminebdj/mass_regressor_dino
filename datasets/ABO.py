@@ -86,7 +86,8 @@ class ABO_DATASET(Dataset):
                 T.RandomRotation(degrees=10),
             ])
         self.transform_in  = False if overfit else True
-        self.split = split
+        self.split = 'overfit' if overfit else split
+        
         self.num_images = 3 if split=='train' else -1 
         self.voxel_size = 0.02
         # Verify all required subdirectories exist
