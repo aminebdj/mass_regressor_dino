@@ -153,7 +153,8 @@ def evaluate(maple_trainer, dataloader, device, num_images=3):
             # Compute loss using mass weighting
             min_mass = dataloader.dataset.min_w
             max_mass = dataloader.dataset.max_w
-            pred_mass = torch.cat([mass_mapping[p_idx.item()] for p_idx in preds.argmax(dim=-1)])
+            
+            pred_mass = torch.cat([mass_mapping[p_idx] for p_idx in preds.argmax(dim=-1).numpy()])
             
             loss = (pred_mass - mass_targets).abs().sum()
             # print(preds)
