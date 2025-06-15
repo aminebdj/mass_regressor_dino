@@ -134,8 +134,8 @@ def evaluate(maple_trainer, dataloader, device, num_images=3):
             # Process large image batches in sub-batches to avoid OOM
             # for i in range(0, images.shape[1], b_size):
             num_images = len(images)
-            
-            batch = images[:, ::(num_images//b_size)]  # sub-batch
+            step_size = num_images//b_size if b_size < num_images else 1
+            batch = images[:, ::]  # sub-batch
             sparse_input = ME.SparseTensor(coordinates=voxels.to(device), features=features.to(device))
             pred_logits = maple_trainer.model(batch, sparse_input)
             # preds = pred_logits
