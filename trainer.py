@@ -127,7 +127,7 @@ def evaluate(maple_trainer, dataloader, device, num_images=3):
     validation_gt = []
     with torch.no_grad():
         num_images = 0
-        mass_mapping = dataloader.corr_property_values
+        mass_mapping = dataloader.dataset.corr_property_values
         for voxels, features, data, targets, mass_targets in dataloader:
             images = data['image'].to(device)
             mass_targets = mass_targets.cpu()
