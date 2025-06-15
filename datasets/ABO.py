@@ -70,8 +70,8 @@ class ABO_DATASET(Dataset):
         masses_list = list(self.sample_to_mass.values())
         self.max_w = max(masses_list)
         self.min_w = min(masses_list)
-        # self.max_w = 1.5
-        # self.min_w = min(masses_list)
+        self.max_w = 1.5
+        self.min_w = min(masses_list)
         probs = (np.array(masses_list)-self.min_w)/(self.max_w-self.min_w)
         self.sample_to_prob = dict(zip(list(self.sample_to_mass.keys()), list(probs)))
         # exit()
