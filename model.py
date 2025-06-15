@@ -134,11 +134,11 @@ import torch.optim as optim
 
 # @TRAINER_REGISTRY.register()
 class MaPLe(nn.Module):
-    def __init__(self):
+    def __init__(self, fuse=False):
         super(MaPLe, self).__init__()
         self.device = device
         self.cfg = setup_cfg()
-        self.build_model(self.cfg)
+        self.build_model(self.cfg, fuse)
         # self.build_classifier()
     def build_classifier(self):
         self.model = Classifier()
@@ -150,7 +150,7 @@ class MaPLe(nn.Module):
         self.optim = optim.Adam(self.model.parameters(), lr=cfg.OPTIM.LR, weight_decay=cfg.OPTIM.WEIGHT_DECAY)
         self.sched = torch.optim.lr_scheduler.StepLR(self.optim, step_size=cfg.OPTIM.STEP_SIZE, gamma=cfg.OPTIM.GAMMA)
         self.register_model("MultiModalPromptLearner", self.model, self.optim, self.sched)
-    def build_model(self, cfg):
+    def build_model(self, cfg, fuse):
         self.classnames = [
             f"An object with weight {w}g"
             for w in range(100, 400_001, 2000)
@@ -169,7 +169,7 @@ class MaPLe(nn.Module):
             clip_model.float()
 
         print("Building custom CLIP")
-        self.model = CustomCLIP(cfg, self.classnames, clip_model)
+        self.model = CustomCLIP(cfg, self.classnames, clip_model, fuse=fuse)
 
         print("Turning off gradients in both the image and the text encoder")
         name_to_update = "prompt_learner"

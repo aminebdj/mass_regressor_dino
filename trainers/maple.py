@@ -265,7 +265,7 @@ class MaPLe(TrainerX):
             clip_model.float()
 
         print("Building custom CLIP")
-        self.model = CustomCLIP(cfg, classnames, clip_model)
+        self.model = CustomCLIP(cfg, classnames, clip_model, fuse=fuse)
 
         print("Turning off gradients in both the image and the text encoder")
         name_to_update = "prompt_learner"
