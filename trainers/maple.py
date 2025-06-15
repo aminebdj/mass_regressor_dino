@@ -201,11 +201,10 @@ class CustomCLIP(nn.Module):
         self.logit_scale = clip_model.logit_scale
         self.dtype = clip_model.dtype 
         if not self.clip_classifier:    
-            print(len(classnames))
-            exit()
+            
             self.classifier = nn.Sequential(
                 nn.ReLU(inplace=True),     # ReLU activation
-                nn.Linear(self.dim, len(classnames))          # Final linear layer to 2 classes
+                nn.Linear(100, len(classnames))          # Final linear layer to 2 classes
                 )
 
 
