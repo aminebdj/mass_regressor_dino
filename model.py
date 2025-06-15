@@ -160,6 +160,8 @@ class MaPLe(nn.Module):
             w/1000
             for w in range(100, 400_001, 1000)
         ])
+        print(len(self.corr_property_values))
+        exit()
 
         print(f"Loading CLIP (backbone: {cfg.MODEL.BACKBONE.NAME})")
         clip_model = load_clip_to_cpu(cfg)
