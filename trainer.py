@@ -141,7 +141,8 @@ def evaluate(maple_trainer, dataloader, device, num_images=3):
                 all_preds.append(preds)
             preds = torch.cat(all_preds)
             # Extend targets to match number of images (move to CPU as well)
-            tragets_ext = targets.repeat_interleave(images.shape[1], dim=0)
+            # tragets_ext = targets.repeat_interleave(images.shape[1], dim=0)
+            tragets_ext = targets
 
             # Compute loss using mass weighting
             min_mass = dataloader.dataset.min_w
@@ -196,7 +197,8 @@ def train(data_path,gt_path,val_path, path_to_3d_samples,device='cuda', batch_si
             targets = targets.to(device)
             sparse_input = ME.SparseTensor(coordinates=voxels.to(device), features=features.to(device))
             logits = maple_trainer.model(images, sparse_input)
-            tragets_ext = targets.repeat_interleave(images.shape[1], dim=0)
+            tragets_ext = targets
+            # tragets_ext = targets.repeat_interleave(images.shape[1], dim=0)
             loss = 0.1*soft_cross_entropy(logits, tragets_ext.float())
             # loss = (logits[:, 0]- tragets_ext[:, 0].float()).abs().mean()
 
