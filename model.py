@@ -168,7 +168,7 @@ class MaPLe(nn.Module):
         self.optim = build_optimizer(self.model, cfg.OPTIM)
         for name, param in self.model.named_parameters():
             # if 'transformer.resblocks.11' in name:
-            if name_to_update not in name:
+            if name_to_update not in name and name_to_update not in 'mink_encoder':
                 param.requires_grad = False
         for name, param in self.model.named_parameters():
             # if 'mlp' in name:
