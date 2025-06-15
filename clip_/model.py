@@ -356,7 +356,11 @@ class Transformer(nn.Module):
             self.resblocks = nn.Sequential(*[ResidualAttentionBlock(width, heads, attn_mask) for _ in range(layers)])
 
     def forward(self, x: torch.Tensor):
-        return self.resblocks(x)
+        multi_level_features = []
+        for layer in self.resblocks:
+            x = self.resblocks(x)
+            multi_level_features.append(x[0])
+        return x, multi_level_features
 
 
 class VisionTransformer(nn.Module):
@@ -464,7 +468,7 @@ class VisionTransformer_MaPLe(nn.Module):
 
         x = x.permute(1, 0, 2)  # NLD -> LND
         # Again combine the inputs, so nn.sequential can work
-        outputs = self.transformer([x, compound_deeper_prompts, 0])  # third argument is counter
+        outputs, multi_level_features = self.transformer([x, compound_deeper_prompts, 0])  # third argument is counter
         x = outputs[0]
         x = x.permute(1, 0, 2)  # LND -> NLD
 
@@ -473,7 +477,7 @@ class VisionTransformer_MaPLe(nn.Module):
         if self.proj is not None:
             x = x @ self.proj
 
-        return x
+        return x, multi_level_features
 
 
 class CLIP(nn.Module):

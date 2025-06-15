@@ -74,6 +74,55 @@ class BasicBlock(nn.Module):
         out += identity
         out = self.relu(out)
         return out
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+class CrossAttentionFusion(nn.Module):
+    def __init__(self, dim_q, dim_kv, dim_out=None, num_heads=4, dropout=0.1):
+        """
+        Cross Attention Fusion Module
+
+        Args:
+            dim_q: Dimension of query features (e.g., from Modality A)
+            dim_kv: Dimension of key/value features (e.g., from Modality B)
+            dim_out: Output feature dimension (defaults to dim_q)
+            num_heads: Number of attention heads
+            dropout: Dropout rate
+        """
+        super().__init__()
+        self.dim_out = dim_out or dim_q
+        self.num_heads = num_heads
+
+        self.query_proj = nn.Linear(dim_q, self.dim_out)
+        self.key_proj = nn.Linear(dim_kv, self.dim_out)
+        self.value_proj = nn.Linear(dim_kv, self.dim_out)
+
+        self.attn = nn.MultiheadAttention(embed_dim=self.dim_out, num_heads=num_heads, dropout=dropout, batch_first=True)
+        self.out_proj = nn.Linear(self.dim_out, self.dim_out)
+        self.norm = nn.LayerNorm(self.dim_out)
+
+    def forward(self, query_feats, context_feats, context_mask=None):
+        """
+        Forward pass of cross attention.
+
+        Args:
+            query_feats: [B, Nq, Dq] - Query features (to be updated)
+            context_feats: [B, Nk, Dk] - Context/key-value features (to attend to)
+            context_mask: [B, Nk] - Optional mask for context features
+
+        Returns:
+            Fused output: [B, Nq, D_out]
+        """
+        Q = self.query_proj(query_feats)
+        K = self.key_proj(context_feats)
+        V = self.value_proj(context_feats)
+
+        attn_output, _ = self.attn(Q, K, V, key_padding_mask=context_mask)
+        fused = self.out_proj(attn_output)
+        fused = self.norm(fused + query_feats)  # Residual + LayerNorm
+
+        return fused
 
 
 class MinkowskiResNet(ME.MinkowskiNetwork):
@@ -85,11 +134,21 @@ class MinkowskiResNet(ME.MinkowskiNetwork):
             ME.MinkowskiBatchNorm(channels[0]),
             ME.MinkowskiReLU(),
         )
+        clip_hiden_dim = 768
 
         self.layer1 = BasicBlock(channels[0], channels[0], stride=1, D=D)
+        self.FL1 = CrossAttentionFusion(channels[0], clip_hiden_dim)
         self.layer2 = BasicBlock(channels[0], channels[1], stride=2, D=D)
+        self.FL2 = CrossAttentionFusion(channels[1], clip_hiden_dim)
+            
         self.layer3 = BasicBlock(channels[1], channels[2], stride=2, D=D)
+        self.FL3 = CrossAttentionFusion(channels[2], clip_hiden_dim)
+        
+        
         self.layer4 = BasicBlock(channels[2], channels[3], stride=2, D=D)
+        self.FL4 = CrossAttentionFusion(channels[3], clip_hiden_dim)
+        
+        
 
         self.final = nn.Sequential(
             ME.MinkowskiLinear(channels[3], 512),
@@ -109,12 +168,34 @@ class MinkowskiResNet(ME.MinkowskiNetwork):
                 nn.init.constant_(m.bn.weight, 1)
                 nn.init.constant_(m.bn.bias, 0)
 
-    def forward(self, x: ME.TensorField):
+    def forward(self, x: ME.TensorField, multi_scale_clip_feats: list, num_images_per_pt: int):
+        def fuse_features(x, fusion_layer, clip_f1):
+            _, nq, f_dim =  clip_f1.shape
+            fused_decomposed_features = []
+            for i, f in enumerate(x.decomposed_features):
+                ff  = fusion_layer(f[None, ...], clip_f1[num_images_per_pt*i:num_images_per_pt*(i+1), ...].reshape(1,num_images_per_pt*nq, f_dim).float())
+                fused_decomposed_features.append(ff[0])
+            x = ME.SparseTensor(
+                    features=torch.cat(fused_decomposed_features, dim=0),
+                    coordinate_manager=x.coordinate_manager,
+                    coordinate_map_key=x.coordinate_map_key
+                )
+            return x
+        num_layers = 4
+        sampled_features = multi_scale_clip_feats[::len(multi_scale_clip_feats)//(num_layers)]
+        sampled_features = [f.permute(1,0,2) for f in sampled_features]
         x = self.stem(x)
         x = self.layer1(x)
+        x = fuse_features(x, self.FL1, sampled_features[0])
         x = self.layer2(x)
+        x = fuse_features(x, self.FL2, sampled_features[1])
+        
         x = self.layer3(x)
+        x = fuse_features(x, self.FL3, sampled_features[2])
+        
         x = self.layer4(x)
+        x = fuse_features(x, self.FL4, sampled_features[3])
+        
 
         x = self.global_pool(x)
         x = self.final(x)

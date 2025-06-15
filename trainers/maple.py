@@ -56,7 +56,7 @@ class TextEncoder(nn.Module):
         x = x.permute(1, 0, 2)  # NLD -> LND
         # Pass as the list, as nn.sequential cannot process multiple arguments in the forward pass
         combined = [x, compound_prompts_deeper_text, 0]  # third argument is the counter which denotes depth of prompt
-        outputs = self.transformer(combined)
+        outputs, _ = self.transformer(combined)
         x = outputs[0]  # extract the x back from here
         x = x.permute(1, 0, 2)  # LND -> NLD
         x = self.ln_final(x).type(self.dtype)
@@ -219,9 +219,9 @@ class CustomCLIP(nn.Module):
 
         prompts, shared_ctx, deep_compound_prompts_text, deep_compound_prompts_vision = self.prompt_learner()
         text_features = self.text_encoder(prompts, tokenized_prompts, deep_compound_prompts_text).float()
-        image_features = self.image_encoder(image.type(self.dtype), shared_ctx, deep_compound_prompts_vision)
+        image_features, multi_level_clip_feats = self.image_encoder(image.type(self.dtype), shared_ctx, deep_compound_prompts_vision)
         # image_features = self.image_encoder(image.type(self.dtype))
-        feature_3d = self.mink_encoder(sparse_input)
+        feature_3d = self.mink_encoder(sparse_input, multi_level_clip_feats, N)
         # print(feature_3d)
         # exit()
         image_features = image_features+feature_3d.repeat_interleave(N, dim=0)  # shape: (B*N, C)
