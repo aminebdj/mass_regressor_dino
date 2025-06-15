@@ -201,7 +201,7 @@ def train(data_path,gt_path,val_path, path_to_3d_samples,device='cuda', batch_si
             logits = maple_trainer.model(images, sparse_input)
             tragets_ext = targets
             # tragets_ext = targets.repeat_interleave(images.shape[1], dim=0)
-            loss = soft_cross_entropy(logits, tragets_ext.float())+0.001*(logits[:, 0]- tragets_ext[:, 0].float()).abs().mean()
+            loss = 10*soft_cross_entropy(logits, tragets_ext.float())+0.1*(logits[:, 0]- tragets_ext[:, 0].float()).abs().mean()
             # loss = (logits[:, 0]- tragets_ext[:, 0].float()).abs().mean()
 
             maple_trainer.optim.zero_grad()
