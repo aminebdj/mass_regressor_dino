@@ -219,6 +219,9 @@ class CustomCLIP(nn.Module):
         logit_scale = self.logit_scale.exp()
 
         prompts, shared_ctx, deep_compound_prompts_text, deep_compound_prompts_vision = self.prompt_learner()
+        print(tokenized_prompts.shape)
+        print(deep_compound_prompts_text.shape)
+        exit()
         text_features = self.text_encoder(prompts, tokenized_prompts, deep_compound_prompts_text).float()
         multi_level_clip_feats = []
         if self.fuse:
