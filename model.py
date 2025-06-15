@@ -153,12 +153,12 @@ class MaPLe(nn.Module):
     def build_model(self, cfg):
         self.classnames = [
             f"An object with weight {w}g"
-            for w in range(100, 400_001, 1000)
+            for w in range(100, 400_001, 100)
         ]
         
         self.corr_property_values = np.array([
             w/1000
-            for w in range(100, 400_001, 1000)
+            for w in range(100, 400_001, 100)
         ])
         print(len(self.corr_property_values))
         exit()
