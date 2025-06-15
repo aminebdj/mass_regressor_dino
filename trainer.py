@@ -154,10 +154,10 @@ def evaluate(maple_trainer, dataloader, device, num_images=3):
             # min_mass = dataloader.dataset.min_w
             # max_mass = dataloader.dataset.max_w
             # print(preds.argmax(dim=-1).cpu().numpy().shape)
-            print(preds.shape)
-            print(preds.argmax(dim=-1).cpu().numpy())
-            exit()
-            pred_mass = torch.cat([mass_mapping[p_idx] for p_idx in preds.argmax(dim=-1).cpu().numpy()])
+            # print(preds.shape)
+            # print(preds.argmax(dim=-1).cpu().numpy())
+            # exit()
+            pred_mass = torch.cat([mass_mapping[p_idx[0]] for p_idx in preds.argmax(dim=-1).cpu().numpy()])
             
             loss = (pred_mass - mass_targets).abs().sum()
             # print(preds)
