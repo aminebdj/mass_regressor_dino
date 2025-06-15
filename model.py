@@ -172,7 +172,7 @@ class MaPLe(nn.Module):
                 param.requires_grad = False
         for name, param in self.model.named_parameters():
             # if 'mlp' in name:
-            param.requires_grad = True
+            # param.requires_grad = True
             if name_to_update not in name:
                 # Make sure that VPT prompts are updated
                 if "VPT" in name:

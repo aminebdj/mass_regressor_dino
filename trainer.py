@@ -216,7 +216,7 @@ def train(data_path,gt_path,val_path, path_to_3d_samples,device='cuda', batch_si
             os.makedirs('/'.join(save_figres_in.split('/')[:-1]), exist_ok=True)
             save_preds_gt(validation_gt, validation_preds, epoch, save_figres_in)
             # Append losses to log file
-            with open(log_path, 'a') as log_file:
+            with open(log_path, 'a') as log_file: 
                 log_file.write(f"{epoch+1},{avg_train_loss:.4f},{val_loss:.4f}\n")
 
 

@@ -197,7 +197,8 @@ class CustomCLIP(nn.Module):
         self.mink_encoder = MinkowskiResNet(out_channel = clip_model.visual.output_dim)
         self.dim = clip_model.visual.output_dim
         self.logit_scale = clip_model.logit_scale
-        self.dtype = clip_model.dtype
+        self.dtype = clip_model.dtype 
+        
         # self.classifier = nn.Sequential(
         #     nn.Linear(2*self.dim, self.dim),  # First linear layer
         #     nn.ReLU(inplace=True),     # ReLU activation
@@ -221,6 +222,8 @@ class CustomCLIP(nn.Module):
         image_features = self.image_encoder(image.type(self.dtype), shared_ctx, deep_compound_prompts_vision)
         # image_features = self.image_encoder(image.type(self.dtype))
         feature_3d = self.mink_encoder(sparse_input)
+        print(feature_3d.shape)
+        exit()
         image_features = image_features+feature_3d.repeat_interleave(N, dim=0)  # shape: (B*N, C)
         image_features = image_features / image_features.norm(dim=-1, keepdim=True)
         text_features = text_features / text_features.norm(dim=-1, keepdim=True)
