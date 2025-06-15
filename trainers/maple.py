@@ -222,7 +222,7 @@ class CustomCLIP(nn.Module):
         image_features = self.image_encoder(image.type(self.dtype), shared_ctx, deep_compound_prompts_vision)
         # image_features = self.image_encoder(image.type(self.dtype))
         feature_3d = self.mink_encoder(sparse_input)
-        print(feature_3d.shape)
+        print(feature_3d)
         exit()
         image_features = image_features+feature_3d.repeat_interleave(N, dim=0)  # shape: (B*N, C)
         image_features = image_features / image_features.norm(dim=-1, keepdim=True)
