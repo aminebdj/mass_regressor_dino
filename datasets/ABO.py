@@ -68,8 +68,8 @@ class ABO_DATASET(Dataset):
         self.base_path = path_to_dataset
         self.sample_to_mass = load_json(path_to_annotations)
         masses_list = list(self.sample_to_mass.values())
-        self.max_w = max(masses_list)
-        self.min_w = min(masses_list)
+        # self.max_w = max(masses_list)
+        # self.min_w = min(masses_list)
         self.max_w = 1.5
         self.min_w = min(masses_list)
         probs = (np.array(masses_list)-self.min_w)/(self.max_w-self.min_w)
