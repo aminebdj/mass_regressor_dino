@@ -27,4 +27,4 @@ def collate_fn(batch):
 
     coordinates, features = ME.utils.sparse_collate(coords = all_coords, feats=all_feats)
 
-    return coordinates, features.float(), {'image': torch.stack(all_images)}, torch.stack(all_targets), torch.stack(all_targets_mass)
+    return coordinates, features.float(), {'image': torch.stack(all_images)}, torch.cat(all_targets), torch.cat(all_targets_mass)
