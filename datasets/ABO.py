@@ -115,7 +115,7 @@ class ABO_DATASET(Dataset):
         self.file_list = split_to_file['val'][:1] if overfit else self.file_list 
         self.corr_property_values = np.array([
             w/1000
-            for w in range(100, 400_001, 100)
+            for w in range(100, 400_001, 500)
         ])
         self.sample_to_paths = {}
         for sample_id in self.file_list:

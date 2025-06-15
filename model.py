@@ -153,12 +153,12 @@ class MaPLe(nn.Module):
     def build_model(self, cfg):
         self.classnames = [
             f"An object with weight {w}g"
-            for w in range(100, 400_001, 100)
+            for w in range(100, 400_001, 500)
         ]
         
         self.corr_property_values = np.array([
             w/1000
-            for w in range(100, 400_001, 100)
+            for w in range(100, 400_001, 500)
         ])
 
         print(f"Loading CLIP (backbone: {cfg.MODEL.BACKBONE.NAME})")
