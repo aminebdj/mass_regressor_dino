@@ -11,4 +11,4 @@
 #SBATCH --exclude=ikarus
 
 # Run your script
-python train.py --num_epochs 1000 --experiment_name classifier_3d_clip --batch_size 32 --path_to_3d_samples /cluster/umoja/aminebdj/datasets/ABO/preprocessed --data_path /cluster/umoja/aminebdj/datasets/ABO/abo-benchmark-material --gt_path /cluster/umoja/aminebdj/datasets/ABO/abo_500/filtered_product_weights.json --val_path /cluster/umoja/aminebdj/datasets/ABO/abo_500/scenes
+python train.py --num_epochs 1000 --experiment_name maple_classifier_3d_clip --batch_size 32 --path_to_3d_samples /cluster/umoja/aminebdj/datasets/ABO/preprocessed --data_path /cluster/umoja/aminebdj/datasets/ABO/abo-benchmark-material --gt_path /cluster/umoja/aminebdj/datasets/ABO/abo_500/filtered_product_weights.json --val_path /cluster/umoja/aminebdj/datasets/ABO/abo_500/scenes

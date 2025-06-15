@@ -184,25 +184,26 @@ from torchvision import transforms
 class CustomCLIP(nn.Module):
     def __init__(self, cfg, classnames, clip_model):
         super().__init__()
-        # self.prompt_learner = MultiModalPromptLearner(cfg, classnames, clip_model)
-        # self.tokenized_prompts = self.prompt_learner.tokenized_prompts
-        # self.image_encoder = clip_model.visual
-        # self.text_encoder = TextEncoder(clip_model)
-        clip_model, _ = clip_oai.load("RN50")
+        self.prompt_learner = MultiModalPromptLearner(cfg, classnames, clip_model)
+        self.tokenized_prompts = self.prompt_learner.tokenized_prompts
+        self.image_encoder = clip_model.visual
+        self.text_encoder = TextEncoder(clip_model)
+        # clip_model, _ = clip_oai.load("RN50")
         clip_model.eval()
         self.image_encoder = clip_model.visual
-        self.input_dim = 1024  # RN50 CLIP output dim
+        # self.input_dim = 1024  # RN50 CLIP output dim
 
         
         self.mink_encoder = MinkowskiResNet(out_channel = clip_model.visual.output_dim)
         self.dim = clip_model.visual.output_dim
         self.logit_scale = clip_model.logit_scale
         self.dtype = clip_model.dtype
-        self.classifier = nn.Sequential(
-            nn.Linear(2*self.dim, self.dim),  # First linear layer
-            nn.ReLU(inplace=True),     # ReLU activation
-            nn.Linear(self.dim, 2)          # Final linear layer to 2 classes
-            )
+        # self.classifier = nn.Sequential(
+        #     nn.Linear(2*self.dim, self.dim),  # First linear layer
+        #     nn.ReLU(inplace=True),     # ReLU activation
+        #     nn.Linear(self.dim, 2)          # Final linear layer to 2 classes
+        #     )
+
 
         # self.encoder_3d = MinkowskiFCNN()
 
@@ -212,20 +213,20 @@ class CustomCLIP(nn.Module):
         image = image.view(B * N, C, H, W)
         image = transforms.Resize(224)(image)  # Ensure proper size
         image = transforms.CenterCrop(224)(image)
-        # tokenized_prompts = self.tokenized_prompts
-        # logit_scale = self.logit_scale.exp()
+        tokenized_prompts = self.tokenized_prompts
+        logit_scale = self.logit_scale.exp()
 
-        # prompts, shared_ctx, deep_compound_prompts_text, deep_compound_prompts_vision = self.prompt_learner()
-        # text_features = self.text_encoder(prompts, tokenized_prompts, deep_compound_prompts_text).float()
-        # image_features = self.image_encoder(image.type(self.dtype), shared_ctx, deep_compound_prompts_vision)
-        image_features = self.image_encoder(image.type(self.dtype))
+        prompts, shared_ctx, deep_compound_prompts_text, deep_compound_prompts_vision = self.prompt_learner()
+        text_features = self.text_encoder(prompts, tokenized_prompts, deep_compound_prompts_text).float()
+        image_features = self.image_encoder(image.type(self.dtype), shared_ctx, deep_compound_prompts_vision)
+        # image_features = self.image_encoder(image.type(self.dtype))
         feature_3d = self.mink_encoder(sparse_input)
         image_features = image_features+feature_3d.repeat_interleave(N, dim=0)  # shape: (B*N, C)
-        # image_features = image_features / image_features.norm(dim=-1, keepdim=True)
-        # text_features = text_features / text_features.norm(dim=-1, keepdim=True)
-        # logits = image_features @ text_features.t()
+        image_features = image_features / image_features.norm(dim=-1, keepdim=True)
+        text_features = text_features / text_features.norm(dim=-1, keepdim=True)
+        logits = logit_scale*image_features @ text_features.t()
         # log_probs = F.softmax(logits, dim=1)
-        logits = self.classifier(torch.cat([image_features, feature_3d.repeat_interleave(N, dim=0)], dim=-1))
+        # logits = self.classifier(torch.cat([image_features, feature_3d.repeat_interleave(N, dim=0)], dim=-1))
         return logits
 
 def _get_clones(module, N):
