@@ -156,7 +156,7 @@ def evaluate(maple_trainer, dataloader, device, num_images=3):
             validation_gt += target_mass.cpu().tolist() 
             validation_preds += pred_mass.cpu().tolist() 
             total_loss += loss.item()
-            num_images += preds.shape[0]
+            # num_images += preds.shape[0]
 
     return total_loss / len(dataloader), validation_gt, validation_preds
 def train(data_path,gt_path,val_path, path_to_3d_samples,device='cuda', batch_size=8, save_best_model_in='./logs', num_epochs=100, overfit=False, backbone='clip', tune_blocks=[]):
