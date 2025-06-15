@@ -122,7 +122,7 @@ def soft_cross_entropy(logits, target_probs, reduction='mean'):
 def evaluate(maple_trainer, dataloader, device, num_images=3):
     maple_trainer.model.eval()
     total_loss = 0.0
-    b_size = 100
+    b_size = 10
     validation_preds = []
     validation_gt = []
     with torch.no_grad():
@@ -132,13 +132,13 @@ def evaluate(maple_trainer, dataloader, device, num_images=3):
             targets = targets.to(device)
             all_preds = []
             # Process large image batches in sub-batches to avoid OOM
-            for i in range(0, images.shape[1], b_size):
-                batch = images[:, i:i + b_size]  # sub-batch
-                sparse_input = ME.SparseTensor(coordinates=voxels.to(device), features=features.to(device))
-                pred_logits = maple_trainer.model(batch, sparse_input)
-                # preds = pred_logits
-                preds = F.softmax(pred_logits, dim=1)  # still on GPU
-                all_preds.append(preds)
+            # for i in range(0, images.shape[1], b_size):
+            batch = images[:, :b_size]  # sub-batch
+            sparse_input = ME.SparseTensor(coordinates=voxels.to(device), features=features.to(device))
+            pred_logits = maple_trainer.model(batch, sparse_input)
+            # preds = pred_logits
+            preds = F.softmax(pred_logits, dim=1)  # still on GPU
+            all_preds.append(preds)
             preds = torch.cat(all_preds)
             # Extend targets to match number of images (move to CPU as well)
             # tragets_ext = targets.repeat_interleave(images.shape[1], dim=0)
