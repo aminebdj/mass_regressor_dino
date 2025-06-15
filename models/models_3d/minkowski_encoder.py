@@ -181,20 +181,23 @@ class MinkowskiResNet(ME.MinkowskiNetwork):
                     coordinate_map_key=x.coordinate_map_key
                 )
             return x
-        num_layers = 4
-        sampled_features = multi_scale_clip_feats[::len(multi_scale_clip_feats)//(num_layers)]
-        sampled_features = [f.permute(1,0,2) for f in sampled_features]
+        fuse = False
+        if multi_scale_clip_feats:
+            num_layers = 4
+            sampled_features = multi_scale_clip_feats[::len(multi_scale_clip_feats)//(num_layers)]
+            sampled_features = [f.permute(1,0,2) for f in sampled_features]
+            fuse = True
         x = self.stem(x)
         x = self.layer1(x)
-        x = fuse_features(x, self.FL1, sampled_features[0])
+        x = fuse_features(x, self.FL1, sampled_features[0]) if fuse else x 
         x = self.layer2(x)
-        x = fuse_features(x, self.FL2, sampled_features[1])
+        x = fuse_features(x, self.FL2, sampled_features[1]) if fuse else x
         
         x = self.layer3(x)
-        x = fuse_features(x, self.FL3, sampled_features[2])
+        x = fuse_features(x, self.FL3, sampled_features[2]) if fuse else x
         
         x = self.layer4(x)
-        x = fuse_features(x, self.FL4, sampled_features[3])
+        x = fuse_features(x, self.FL4, sampled_features[3]) if fuse else x
         
 
         x = self.global_pool(x)

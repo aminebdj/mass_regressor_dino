@@ -152,7 +152,7 @@ def evaluate(maple_trainer, dataloader, device, num_images=3):
             pred_mass = preds[:, 0]*(max_mass-min_mass) + min_mass
             target_mass = tragets_ext[:, 0]*(max_mass-min_mass) + min_mass
 
-            loss = (pred_mass - target_mass).abs().sum()
+            loss = ( - target_mass).abs().sum()
             validation_gt += target_mass.cpu().tolist() 
             validation_preds += pred_mass.cpu().tolist() 
             total_loss += loss.item()

@@ -182,8 +182,10 @@ from torchvision import transforms
 
 
 class CustomCLIP(nn.Module):
-    def __init__(self, cfg, classnames, clip_model):
+    def __init__(self, cfg, classnames, clip_model, clip_classifier=False, fuse=False):
         super().__init__()
+        self.fuse = fuse
+        self.clip_classifier = clip_classifier
         self.prompt_learner = MultiModalPromptLearner(cfg, classnames, clip_model)
         self.tokenized_prompts = self.prompt_learner.tokenized_prompts
         self.image_encoder = clip_model.visual
@@ -198,12 +200,12 @@ class CustomCLIP(nn.Module):
         self.dim = clip_model.visual.output_dim
         self.logit_scale = clip_model.logit_scale
         self.dtype = clip_model.dtype 
-        
-        # self.classifier = nn.Sequential(
-        #     nn.Linear(2*self.dim, self.dim),  # First linear layer
-        #     nn.ReLU(inplace=True),     # ReLU activation
-        #     nn.Linear(self.dim, 2)          # Final linear layer to 2 classes
-        #     )
+        if not self.clip_classifier:    
+            self.classifier = nn.Sequential(
+                nn.Linear(2*self.dim, self.dim),  # First linear layer
+                nn.ReLU(inplace=True),     # ReLU activation
+                nn.Linear(self.dim, 2)          # Final linear layer to 2 classes
+                )
 
 
         # self.encoder_3d = MinkowskiFCNN()
@@ -219,15 +221,21 @@ class CustomCLIP(nn.Module):
 
         prompts, shared_ctx, deep_compound_prompts_text, deep_compound_prompts_vision = self.prompt_learner()
         text_features = self.text_encoder(prompts, tokenized_prompts, deep_compound_prompts_text).float()
-        image_features, multi_level_clip_feats = self.image_encoder(image.type(self.dtype), shared_ctx, deep_compound_prompts_vision)
+        multi_level_clip_feats = []
+        if self.fuse:
+            image_features, multi_level_clip_feats = self.image_encoder(image.type(self.dtype), shared_ctx, deep_compound_prompts_vision)
         # image_features = self.image_encoder(image.type(self.dtype))
         image_features = self.mink_encoder(sparse_input, multi_level_clip_feats, N)
         # print(feature_3d)
         # exit()
         # image_features = feature_3d  # shape: (B*N, C)
-        image_features = image_features / image_features.norm(dim=-1, keepdim=True)
-        text_features = text_features / text_features.norm(dim=-1, keepdim=True)
-        logits = image_features @ text_features.t()
+        if self.clip_classifier:
+            image_features = image_features / image_features.norm(dim=-1, keepdim=True)
+            text_features = text_features / text_features.norm(dim=-1, keepdim=True)
+            logits = image_features @ text_features.t()
+            
+        else:
+            logits = self.classifier(image_features)
         # log_probs = F.softmax(logits, dim=1)
         # logits = self.classifier(torch.cat([image_features, feature_3d.repeat_interleave(N, dim=0)], dim=-1))
         return logits
