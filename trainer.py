@@ -135,7 +135,7 @@ def evaluate(maple_trainer, dataloader, device, num_images=3):
         num_images = 0
         mass_mapping = dataloader.dataset.corr_property_values
         print('Evaluating ... ')
-        for voxels, features, data, targets, mass_targets in tqdm(dataloader):
+        for voxels, features, data, targets, mass_targets in dataloader:
             images = data['image'].to(device)
             mass_targets = mass_targets.cpu()
             all_preds = []
