@@ -252,7 +252,7 @@ def train(data_path,gt_path,val_path, path_to_3d_samples,device='cuda', batch_si
             metrics = save_preds_gt(validation_gt, validation_preds, epoch, save_figres_in)
             # Append losses to log file
             with open(log_path, 'a') as log_file: 
-                log_file.write(f"{epoch+1},{avg_train_loss:.4f},{val_loss:.4f}\n,{metrics['ADE']:.4f},{metrics['ALDE']:.4f},{metrics['APE']:.4f},{metrics['MnRE']:.4f}")
+                log_file.write(f"{epoch+1},{avg_train_loss:.4f},{val_loss:.4f},{metrics['ADE']:.4f},{metrics['ALDE']:.4f},{metrics['APE']:.4f},{metrics['MnRE']:.4f}\n")
 
 
         # # Save best model
