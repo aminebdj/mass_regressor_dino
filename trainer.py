@@ -143,12 +143,12 @@ def evaluate(maple_trainer, dataloader, device, num_images=3):
             # for i in range(0, images.shape[1], b_size):
             num_images = len(images)
             step_size = num_images//b_size if b_size < num_images else 1
-            batch = images[:, ::step_size]  # sub-batch
+            # batch = images[:, ::step_size]  # sub-batch
             # print(len(batch))
             # print(f"Features shape: {features.shape}")
             # print(f"IMage shape: {batch.shape}")
             sparse_input = ME.SparseTensor(coordinates=voxels.to(device), features=features.to(device))
-            pred_logits = maple_trainer.model(batch, sparse_input)
+            pred_logits = maple_trainer.model(images, sparse_input)
             # preds = pred_logits
             preds = F.softmax(pred_logits, dim=1)  # still on GPU
             # exit()
@@ -196,7 +196,7 @@ def train(data_path,gt_path,val_path, path_to_3d_samples,device='cuda', batch_si
     val_dataset = ABO_DATASET(split='val', overfit=overfit, path_to_3d_samples=path_to_3d_samples, path_to_dataset=data_path, val_path=val_path, path_to_annotations=gt_path)
     # train_dataset[0]
     train_dataloader = DataLoader(train_dataset, batch_size=batch_size, num_workers=11, shuffle=True, collate_fn=collate_fn)
-    val_dataloader = DataLoader(val_dataset, batch_size=1, num_workers=10, shuffle=False, collate_fn=collate_fn)
+    val_dataloader = DataLoader(val_dataset, batch_size=1, num_workers=11, shuffle=False, collate_fn=collate_fn)
     # print(len(val_dataloader))
     # exit()
     # best_val_loss = float('inf')
