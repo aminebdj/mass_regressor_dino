@@ -109,7 +109,7 @@ class ABO_DATASET(Dataset):
                 continue
             
             split_to_file['train'].append(filename)
-        split_to_file['train'] = split_to_file['train'][:1]
+        # split_to_file['train'] = split_to_file['train'][:1]
         # Get list of files (assuming all folders have same files in same order)
         self.file_list = split_to_file[split]
         self.file_list = split_to_file['val'][:1] if overfit else self.file_list 
