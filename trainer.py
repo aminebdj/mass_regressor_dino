@@ -145,9 +145,9 @@ def evaluate(maple_trainer, dataloader, device, num_images=3):
             batch = images[:, ::step_size]  # sub-batch
             sparse_input = ME.SparseTensor(coordinates=voxels.to(device), features=features.to(device))
             pred_logits = maple_trainer.model(batch, sparse_input)
-            exit()
             # preds = pred_logits
             preds = F.softmax(pred_logits, dim=1)  # still on GPU
+            exit()
             
             # all_preds.append(preds)
             # preds = torch.cat(all_preds)
