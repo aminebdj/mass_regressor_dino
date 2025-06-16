@@ -144,6 +144,9 @@ def evaluate(maple_trainer, dataloader, device, num_images=3):
             num_images = len(images)
             step_size = num_images//b_size if b_size < num_images else 1
             batch = images[:, ::step_size]  # sub-batch
+            print(len(batch))
+            print(f"Features shape: {features.shape}")
+            print(f"IMage shape: {batch.shape}")
             sparse_input = ME.SparseTensor(coordinates=voxels.to(device), features=features.to(device))
             pred_logits = maple_trainer.model(batch, sparse_input)
             # preds = pred_logits
