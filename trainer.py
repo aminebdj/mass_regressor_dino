@@ -134,7 +134,8 @@ def evaluate(maple_trainer, dataloader, device, num_images=3):
     with torch.no_grad():
         num_images = 0
         mass_mapping = dataloader.dataset.corr_property_values
-        for voxels, features, data, targets, mass_targets in dataloader:
+        print('Evaluating ... ')
+        for voxels, features, data, targets, mass_targets in tqdm(dataloader):
             images = data['image'].to(device)
             mass_targets = mass_targets.cpu()
             all_preds = []
@@ -147,7 +148,7 @@ def evaluate(maple_trainer, dataloader, device, num_images=3):
             pred_logits = maple_trainer.model(batch, sparse_input)
             # preds = pred_logits
             preds = F.softmax(pred_logits, dim=1)  # still on GPU
-            exit()
+            # exit()
             
             # all_preds.append(preds)
             # preds = torch.cat(all_preds)
