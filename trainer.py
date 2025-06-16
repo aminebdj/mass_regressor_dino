@@ -143,11 +143,9 @@ def evaluate(maple_trainer, dataloader, device, num_images=3):
             num_images = len(images)
             step_size = num_images//b_size if b_size < num_images else 1
             batch = images[:, ::step_size]  # sub-batch
-            print(len(batch))
-            print(len(batch))
-            exit()
             sparse_input = ME.SparseTensor(coordinates=voxels.to(device), features=features.to(device))
             pred_logits = maple_trainer.model(batch, sparse_input)
+            exit()
             # preds = pred_logits
             preds = F.softmax(pred_logits, dim=1)  # still on GPU
             
