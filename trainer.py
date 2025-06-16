@@ -14,8 +14,9 @@ num_workers = max(os.cpu_count() - 1, 1)  # Ensure at least 1 worker
 import MinkowskiEngine as ME
 
 import numpy as np
-
 def save_preds_gt(validation_gt, validation_preds, epoch, save_figres_in):
+    import numpy as np
+    import matplotlib.pyplot as plt
 
     # Convert to NumPy arrays
     validation_gt = np.array(validation_gt)
@@ -50,13 +51,11 @@ def save_preds_gt(validation_gt, validation_preds, epoch, save_figres_in):
     plt.plot(alde, label='ALDE', color='orange')
     plt.title('Absolute Log Difference Error (ALDE)')
     plt.ylim([0, np.max(alde)*1.1])
-    
     plt.grid(True)
 
     plt.subplot(2, 2, 3)
     plt.plot(ape, label='APE', color='green')
     plt.ylim([0, 1.1])
-    
     plt.title('Absolute Percentage Error (APE)')
     plt.grid(True)
 
@@ -70,21 +69,28 @@ def save_preds_gt(validation_gt, validation_preds, epoch, save_figres_in):
     plt.tight_layout(rect=[0, 0, 1, 0.96])
     plt.savefig(save_figres_in.replace('.png', '_metrics.png'))
     plt.close()
+
+    # Plot predictions vs ground truth
     plt.figure(figsize=(10, 6))
     plt.plot(gt_sorted, label='Ground Truth', color='blue')
     plt.plot(pred_sorted, label='Predictions', color='red')
-    plt.ylim([0, max([np.max(pred_sorted), np.max(gt_sorted)])*1.1])
-    
+    plt.ylim([0, max([np.max(pred_sorted), np.max(gt_sorted)]) * 1.1])
     plt.title(f'Normal Predictions vs Ground Truth - Epoch {epoch+1}')
     plt.xlabel('Sample Index')
     plt.ylabel('Value')
     plt.legend()
     plt.grid(True)
     plt.tight_layout()
-
-    # Save this figure separately
     plt.savefig(save_figres_in.replace('.png', '_sorted.png'))
     plt.close()
+
+    # Return dictionary of mean metrics
+    return {
+        'ADE': float(np.mean(ade)),
+        'ALDE': float(np.mean(alde)),
+        'APE': float(np.mean(ape)),
+        'MnRE': float(np.mean(mnre)),
+    }
     
 # def soft_cross_entropy(logits, target_probs, reduction='mean'):
 #     """
@@ -191,8 +197,10 @@ def train(data_path,gt_path,val_path, path_to_3d_samples,device='cuda', batch_si
     # best_val_loss = float('inf')
 
     with open(log_path, 'w') as log_file:
-        log_file.write("Epoch,TrainLoss,ADE\n")
+        log_file.write("Epoch,TrainLoss, ADE*,ADE,ALDE,APE,MnRE\n")
     step = 0
+    best_val_loss = float('inf')
+    best_checkpoint_path = os.path.join(os.path.dirname(log_path), 'best_model.pth')
     # print(f"[Loading] with {num_workers} cores")
     for epoch in range(num_epochs):
         maple_trainer.model.train()
@@ -225,17 +233,26 @@ def train(data_path,gt_path,val_path, path_to_3d_samples,device='cuda', batch_si
             # maple_trainer.optim.update_lr()
             running_train_loss += loss.item()
             # print(f"Step {step+1}: Train Loss = {loss.item():.4f}")
-        if epoch % 10 == 0:
+        if epoch % 5 == 0:
             avg_train_loss = running_train_loss / num_images
             val_loss, validation_gt, validation_preds = evaluate(maple_trainer, val_dataloader, device)
+            if val_loss < best_val_loss:
+                best_val_loss = val_loss
+                torch.save({
+                    'epoch': epoch + 1,
+                    'model_state_dict': maple_trainer.model.state_dict(),
+                    'optimizer_state_dict': maple_trainer.optim.state_dict(),
+                    'val_loss': val_loss,
+                }, best_checkpoint_path)
+                print(f"Best model saved at epoch {epoch+1} with ADE {val_loss:.4f}")
 
             print(f"Epoch {epoch+1}: Train Loss = {avg_train_loss/len(val_dataloader.dataset):.4f}, ADE = {val_loss:.4f}")
             save_figres_in = '/'.join(log_path.split('/')[:-1]+['per_sample_preds', f'{epoch}.png'])
             os.makedirs('/'.join(save_figres_in.split('/')[:-1]), exist_ok=True)
-            save_preds_gt(validation_gt, validation_preds, epoch, save_figres_in)
+            metrics = save_preds_gt(validation_gt, validation_preds, epoch, save_figres_in)
             # Append losses to log file
             with open(log_path, 'a') as log_file: 
-                log_file.write(f"{epoch+1},{avg_train_loss:.4f},{val_loss:.4f}\n")
+                log_file.write(f"{epoch+1},{avg_train_loss:.4f},{val_loss:.4f}\n,{metrics['ADE']:.4f},{metrics['ALDE']:.4f},{metrics['APE']:.4f},{metrics['MnRE']:.4f}")
 
 
         # # Save best model

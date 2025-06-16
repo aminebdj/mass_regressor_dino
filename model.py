@@ -140,16 +140,6 @@ class MaPLe(nn.Module):
         self.cfg = setup_cfg()
         self.build_model(self.cfg, fuse)
         # self.build_classifier()
-    def build_classifier(self):
-        self.model = Classifier()
-        cfg = self.cfg
-        cfg.OPTIM.LR = 1e-4
-        cfg.OPTIM.WEIGHT_DECAY = 1e-4
-        cfg.OPTIM.STEP_SIZE = 30
-        cfg.OPTIM.GAMMA = 0.1
-        self.optim = optim.Adam(self.model.parameters(), lr=cfg.OPTIM.LR, weight_decay=cfg.OPTIM.WEIGHT_DECAY)
-        self.sched = torch.optim.lr_scheduler.StepLR(self.optim, step_size=cfg.OPTIM.STEP_SIZE, gamma=cfg.OPTIM.GAMMA)
-        self.register_model("MultiModalPromptLearner", self.model, self.optim, self.sched)
     def build_model(self, cfg, fuse):
         self.classnames = [
             f"An object with weight {w}g"
@@ -162,7 +152,7 @@ class MaPLe(nn.Module):
         ])
 
         print(f"Loading CLIP (backbone: {cfg.MODEL.BACKBONE.NAME})")
-        clip_model = load_clip_to_cpu(cfg)
+        clip_model = load_clip_to_cpu(cfg, load_standard_clip = True)
 
         if cfg.TRAINER.MAPLE.PREC == "fp32" or cfg.TRAINER.MAPLE.PREC == "amp":
             # CLIP's default precision is fp16

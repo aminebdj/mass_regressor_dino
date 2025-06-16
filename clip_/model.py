@@ -358,8 +358,8 @@ class Transformer(nn.Module):
     def forward(self, x: torch.Tensor):
         multi_level_features = []
         for layer in self.resblocks:
-            x = self.resblocks(x)
-            multi_level_features.append(x[0])
+            x = layer(x)
+            multi_level_features.append(x)
         return x, multi_level_features
 
 
@@ -415,7 +415,7 @@ class VisionTransformer(nn.Module):
         x = self.ln_pre(x)
 
         x = x.permute(1, 0, 2)  # NLD -> LND
-        x = self.transformer(x)
+        x, multi_level_features = self.transformer(x)
         x = x.permute(1, 0, 2)  # LND -> NLD
 
         x = self.ln_post(x[:, 0, :])
@@ -423,7 +423,7 @@ class VisionTransformer(nn.Module):
         if self.proj is not None:
             x = x @ self.proj
 
-        return x
+        return x, multi_level_features
 
 
 class VisionTransformer_MaPLe(nn.Module):

@@ -14,13 +14,13 @@ from dassl.utils import load_pretrained_weights, load_checkpoint
 from dassl.optim import build_optimizer, build_lr_scheduler
 
 from clip_ import clip
-import clip as clip_oai 
+# import clip as clip_oai 
 from clip_.simple_tokenizer import SimpleTokenizer as _Tokenizer
 from models.models_3d.minkowski_encoder import MinkowskiResNet
 _tokenizer = _Tokenizer()
 
 
-def load_clip_to_cpu(cfg):
+def load_clip_to_cpu(cfg, load_standard_clip = False):
     backbone_name = cfg.MODEL.BACKBONE.NAME
     url = clip._MODELS[backbone_name]
     model_path = clip._download(url)
@@ -32,11 +32,12 @@ def load_clip_to_cpu(cfg):
 
     except RuntimeError:
         state_dict = torch.load(model_path, map_location="cpu")
-    design_details = {"trainer": 'MaPLe',
+    design_details = {"trainer": 'CoCoOp' if load_standard_clip else 'MaPLe',
                       "vision_depth": 0,
                       "language_depth": 0, "vision_ctx": 0,
                       "language_ctx": 0,
-                      "maple_length": cfg.TRAINER.MAPLE.N_CTX}
+                      "maple_length": cfg.TRAINER.MAPLE.N_CTX,
+                      "load_standard_clip": load_standard_clip}
     model = clip.build_model(state_dict or model.state_dict(), design_details)
 
     return model
@@ -216,18 +217,19 @@ class CustomCLIP(nn.Module):
         image = image.view(B * N, C, H, W)
         image = transforms.Resize(224)(image)  # Ensure proper size
         image = transforms.CenterCrop(224)(image)
-        tokenized_prompts = self.tokenized_prompts
-        logit_scale = self.logit_scale.exp()
+        # tokenized_prompts = self.tokenized_prompts
+        # logit_scale = self.logit_scale.exp()
 
-        prompts, shared_ctx, deep_compound_prompts_text, deep_compound_prompts_vision = self.prompt_learner()
+        # prompts, shared_ctx, deep_compound_prompts_text, deep_compound_prompts_vision = self.prompt_learner()
         # print(tokenized_prompts.shape)
         # print(len(deep_compound_prompts_text))
         # exit()
-        if not self.clip_classifier:
-            text_features = self.text_encoder(prompts, tokenized_prompts, deep_compound_prompts_text).float()
+        # if not self.clip_classifier:
+        #     text_features = self.text_encoder(prompts, tokenized_prompts, deep_compound_prompts_text).float()
         multi_level_clip_feats = []
+        # image_features, multi_level_clip_feats = self.image_encoder(image.type(self.dtype))
         if self.fuse:
-            image_features, multi_level_clip_feats = self.image_encoder(image.type(self.dtype), shared_ctx, deep_compound_prompts_vision)
+            image_features, multi_level_clip_feats = self.image_encoder(image.type(self.dtype))
         # image_features = self.image_encoder(image.type(self.dtype))
         image_features = self.mink_encoder(sparse_input, multi_level_clip_feats, N)
         # print(feature_3d)
