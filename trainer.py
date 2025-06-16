@@ -200,7 +200,7 @@ def train(data_path,gt_path,val_path, path_to_3d_samples,device='cuda', batch_si
         log_file.write("Epoch,TrainLoss, ADE*,ADE,ALDE,APE,MnRE\n")
     step = 0
     best_val_loss = float('inf')
-    best_checkpoint_path = os.path.join(os.path.dirname(log_path), 'best_model.pth')
+    best_checkpoint_path = os.path.join(os.path.dirname(log_path), f'best_model_Fuse_{fuse}_BS_{batch_size}.pth')
     # print(f"[Loading] with {num_workers} cores")
     for epoch in range(num_epochs):
         maple_trainer.model.train()

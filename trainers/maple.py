@@ -229,7 +229,7 @@ class CustomCLIP(nn.Module):
         multi_level_clip_feats = []
         # image_features, multi_level_clip_feats = self.image_encoder(image.type(self.dtype))
         if self.fuse:
-            print('Fusion')
+            # print('Fusion')
             image_features, multi_level_clip_feats = self.image_encoder(image.type(self.dtype))
         # image_features = self.image_encoder(image.type(self.dtype))
         image_features = self.mink_encoder(sparse_input, multi_level_clip_feats, N)
