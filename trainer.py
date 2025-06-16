@@ -128,7 +128,7 @@ def soft_cross_entropy(logits, target_probs, reduction='mean'):
 def evaluate(maple_trainer, dataloader, device, num_images=3):
     maple_trainer.model.eval()
     total_loss = 0.0
-    b_size = 10
+    b_size = 3
     validation_preds = []
     validation_gt = []
     with torch.no_grad():
