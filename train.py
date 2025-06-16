@@ -15,7 +15,7 @@ if __name__ == '__main__':
     parser.add_argument('--gt_path', type=str, default='/mnt/ssda/datasets/abo_500/filtered_product_weights.json', help='Number of training epochs')
     parser.add_argument('--val_path', type=str, default='/mnt/ssda/datasets/abo_500/scenes', help='Number of training epochs')
     parser.add_argument('--path_to_3d_samples', type=str, default='/mnt/ssda/datasets/ABO/raw/3dmodels/preprocessed', help='Number of training epochs')
-    parser.add_argument('--fuse',type=bool, default=True, help='Number of training epochs')
+    parser.add_argument('--fuse',type=bool, default=False, help='Number of training epochs')
     # parser.add_argument('--checkpoint', type='', default='', help='Number of training epochs')
     parser.add_argument('--tune_blocks', type=list, default=['layer4'], help='Number of training epochs')
 
