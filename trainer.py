@@ -138,11 +138,11 @@ def evaluate(maple_trainer, dataloader, device, num_images=3):
         for voxels, features, data, targets, mass_targets in dataloader:
             images = data['image'].to(device)
             mass_targets = mass_targets.cpu()
-            all_preds = []
+            # all_preds = []
             # Process large image batches in sub-batches to avoid OOM
             # for i in range(0, images.shape[1], b_size):
-            num_images = len(images)
-            step_size = num_images//b_size if b_size < num_images else 1
+            # num_images = len(images)
+            # step_size = num_images//b_size if b_size < num_images else 1
             # batch = images[:, ::step_size]  # sub-batch
             # print(len(batch))
             # print(f"Features shape: {features.shape}")
