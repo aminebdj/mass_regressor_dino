@@ -183,12 +183,12 @@ def evaluate(maple_trainer, dataloader, device, num_images=3):
 def train(data_path,gt_path,val_path, path_to_3d_samples,device='cuda', batch_size=8, fuse=False, save_best_model_in='./logs', num_epochs=100, overfit=False, backbone='clip', tune_blocks=[], mass_step = 2000):
     classnames = [
             f"An object with weight {w}g"
-            for w in range(9.79, 453138+mass_step, mass_step)
+            for w in range(10, 453138+mass_step, mass_step)
         ]
         
     corr_property_values = np.array([
             float(w/1000)
-            for w in range(9.79, 453138+mass_step, mass_step)
+            for w in range(10, 453138+mass_step, mass_step)
         ])
     # model = Regressor(feature_extractor = backbone, tune_blocks=tune_blocks).to(device)
     maple_trainer = MaPLe(fuse=fuse, corr_property_values=corr_property_values, classnames= classnames)
@@ -230,6 +230,7 @@ def train(data_path,gt_path,val_path, path_to_3d_samples,device='cuda', batch_si
             targets = targets.to(device)
             sparse_input = ME.SparseTensor(coordinates=voxels.to(device), features=features.to(device))
             logits = maple_trainer.model(images, sparse_input)
+            # preds = F.softmax(logits, dim=1)  # still on GPU
             # tragets_ext = targets
             # tragets_ext = targets.repeat_interleave(images.shape[1], dim=0)
             # loss = soft_cross_entropy(logits, tragets_ext.float())
