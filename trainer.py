@@ -180,10 +180,18 @@ def evaluate(maple_trainer, dataloader, device, num_images=3):
             # num_images += preds.shape[0]
 
     return total_loss / len(dataloader), validation_gt, validation_preds
-def train(data_path,gt_path,val_path, path_to_3d_samples,device='cuda', batch_size=8, fuse=False, save_best_model_in='./logs', num_epochs=100, overfit=False, backbone='clip', tune_blocks=[]):
-
+def train(data_path,gt_path,val_path, path_to_3d_samples,device='cuda', batch_size=8, fuse=False, save_best_model_in='./logs', num_epochs=100, overfit=False, backbone='clip', tune_blocks=[], mass_step = 2000):
+    class_names = [
+            f"An object with weight {w}g"
+            for w in range(100, 400_001, mass_step)
+        ]
+        
+    corr_property_values = np.array([
+            float(w/1000)
+            for w in range(100, 400_001, mass_step)
+        ])
     # model = Regressor(feature_extractor = backbone, tune_blocks=tune_blocks).to(device)
-    maple_trainer = MaPLe(fuse=fuse)
+    maple_trainer = MaPLe(fuse=fuse, corr_property_values=corr_property_values, class_names= class_names)
     # optimizer = torch.optim.Adam(model.parameters(), lr=0.005)
     # criterion = nn.MSELoss()
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -192,8 +200,8 @@ def train(data_path,gt_path,val_path, path_to_3d_samples,device='cuda', batch_si
     log_path = os.path.join(save_best_model_in, 'log.txt')
 
 
-    train_dataset = ABO_DATASET(split='train', overfit=overfit, path_to_3d_samples=path_to_3d_samples, path_to_dataset=data_path, val_path=val_path, path_to_annotations=gt_path)
-    val_dataset = ABO_DATASET(split='val', overfit=overfit, path_to_3d_samples=path_to_3d_samples, path_to_dataset=data_path, val_path=val_path, path_to_annotations=gt_path)
+    train_dataset = ABO_DATASET(split='train', overfit=overfit, path_to_3d_samples=path_to_3d_samples, path_to_dataset=data_path, val_path=val_path, path_to_annotations=gt_path, corr_property_values=corr_property_values)
+    val_dataset = ABO_DATASET(split='val', overfit=overfit, path_to_3d_samples=path_to_3d_samples, path_to_dataset=data_path, val_path=val_path, path_to_annotations=gt_path, corr_property_values=corr_property_values)
     # train_dataset[0]
     train_dataloader = DataLoader(train_dataset, batch_size=batch_size, num_workers=11, shuffle=True, collate_fn=collate_fn)
     val_dataloader = DataLoader(val_dataset, batch_size=1, num_workers=11, shuffle=False, collate_fn=collate_fn)

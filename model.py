@@ -134,22 +134,16 @@ import torch.optim as optim
 
 # @TRAINER_REGISTRY.register()
 class MaPLe(nn.Module):
-    def __init__(self, fuse=False):
+    def __init__(self, fuse=False, classnames = [], corr_property_values = []):
         super(MaPLe, self).__init__()
         self.device = device
         self.cfg = setup_cfg()
         self.build_model(self.cfg, fuse)
+        self.classnames = classnames
+        self.corr_property_values = corr_property_values
         # self.build_classifier()
     def build_model(self, cfg, fuse):
-        self.classnames = [
-            f"An object with weight {w}g"
-            for w in range(100, 400_001, 2000)
-        ]
         
-        self.corr_property_values = np.array([
-            w/1000
-            for w in range(100, 400_001, 2000)
-        ])
 
         print(f"Loading CLIP (backbone: {cfg.MODEL.BACKBONE.NAME})")
         clip_model = load_clip_to_cpu(cfg, load_standard_clip = True)

@@ -45,7 +45,7 @@ def expand_array(input_array, k):
 import torchvision.transforms as T
 
 class ABO_DATASET(Dataset):
-    def __init__(self, split = 'train', overfit=False,path_to_3d_samples = '/mnt/ssda/datasets/ABO/raw/3dmodels/preprocessed', path_to_dataset='/cluster/umoja/aminebdj/datasets/ABO/abo-benchmark-material', val_path="/cluster/umoja/aminebdj/datasets/ABO/abo_500/scenes", path_to_annotations='/cluster/umoja/aminebdj/datasets/ABO/abo_500/filtered_product_weights.json', return_probs = True):
+    def __init__(self, split = 'train', overfit=False,path_to_3d_samples = '/mnt/ssda/datasets/ABO/raw/3dmodels/preprocessed', path_to_dataset='/cluster/umoja/aminebdj/datasets/ABO/abo-benchmark-material', val_path="/cluster/umoja/aminebdj/datasets/ABO/abo_500/scenes", path_to_annotations='/cluster/umoja/aminebdj/datasets/ABO/abo_500/filtered_product_weights.json', return_probs = True, corr_property_values=[]):
         """
         Args:
             base_path (string): Path to the directory containing the subfolders with data.
@@ -113,10 +113,7 @@ class ABO_DATASET(Dataset):
         # Get list of files (assuming all folders have same files in same order)
         self.file_list = split_to_file[split]
         self.file_list = split_to_file['val'][:1] if overfit else self.file_list 
-        self.corr_property_values = np.array([
-            w/1000
-            for w in range(100, 400_001, 2000)
-        ])
+        self.corr_property_values = corr_property_values
         self.sample_to_paths = {}
         for sample_id in self.file_list:
             sample_dir = os.path.join(self.base_path, sample_id)
