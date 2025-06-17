@@ -138,9 +138,10 @@ class MaPLe(nn.Module):
         super(MaPLe, self).__init__()
         self.device = device
         self.cfg = setup_cfg()
-        self.build_model(self.cfg, fuse)
         self.classnames = classnames
         self.corr_property_values = corr_property_values
+        self.build_model(self.cfg, fuse)
+        
         # self.build_classifier()
     def build_model(self, cfg, fuse):
         
