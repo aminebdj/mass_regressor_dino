@@ -134,8 +134,9 @@ def evaluate(maple_trainer, dataloader, device, num_images=3):
     with torch.no_grad():
         num_images = 0
         mass_mapping = dataloader.dataset.corr_property_values
+        mass_res = dataloader.dataset.corr_property_values[1]-dataloader.dataset.corr_property_values[0]
         print('Evaluating ... ')
-        for voxels, features, data, targets, mass_targets in dataloader:
+        for voxels, features, data, targets, mass_targets, fg_probs_gt in dataloader:
             images = data['image'].to(device)
             mass_targets = mass_targets.cpu()
             # all_preds = []
@@ -148,7 +149,7 @@ def evaluate(maple_trainer, dataloader, device, num_images=3):
             # print(f"Features shape: {features.shape}")
             # print(f"IMage shape: {batch.shape}")
             sparse_input = ME.SparseTensor(coordinates=voxels.to(device), features=features.to(device))
-            pred_logits = maple_trainer.model(images, sparse_input)
+            pred_logits, fg_prob = maple_trainer.model(images, sparse_input)
             # preds = pred_logits
             preds = F.softmax(pred_logits, dim=1)  # still on GPU
             # exit()
@@ -168,7 +169,7 @@ def evaluate(maple_trainer, dataloader, device, num_images=3):
             # print(preds.shape)
             # print(preds.argmax(dim=-1).cpu().numpy())
             # exit()
-            pred_mass = torch.tensor([mass_mapping[p_idx] for p_idx in preds.argmax(dim=-1).long().cpu().numpy()])
+            pred_mass = torch.tensor([mass_mapping[p_idx] for p_idx in preds.argmax(dim=-1).long().cpu().numpy()])+fg_prob.squeeze().item()*mass_res
             
             loss = (pred_mass - mass_targets).abs().sum()
             # print(preds)
@@ -183,12 +184,12 @@ def evaluate(maple_trainer, dataloader, device, num_images=3):
 def train(data_path,gt_path,val_path, path_to_3d_samples,device='cuda', batch_size=8, fuse=False, save_best_model_in='./logs', num_epochs=100, overfit=False, backbone='clip', tune_blocks=[], mass_step = 2000):
     classnames = [
             f"An object with weight {w}g"
-            for w in range(10, 453138+mass_step, mass_step)
+            for w in range(9, 453138+mass_step, mass_step)
         ]
         
     corr_property_values = np.array([
             float(w/1000)
-            for w in range(10, 453138+mass_step, mass_step)
+            for w in range(9, 453138+mass_step, mass_step)
         ])
     # model = Regressor(feature_extractor = backbone, tune_blocks=tune_blocks).to(device)
     maple_trainer = MaPLe(fuse=fuse, corr_property_values=corr_property_values, classnames= classnames)
@@ -221,15 +222,17 @@ def train(data_path,gt_path,val_path, path_to_3d_samples,device='cuda', batch_si
         num_images = 0
         # val_loss, validation_gt, validation_preds = evaluate(maple_trainer, val_dataloader, device)
         
-        for voxels, features, data, targets, mass_targets in tqdm(train_dataloader):
+        for voxels, features, data, targets, mass_targets, fg_probs_gt in tqdm(train_dataloader):
             images = data['image']
             num_images += len(images)
 
             # continue
             images = images.to(device)
             targets = targets.to(device)
+            fg_probs_gt = fg_probs_gt.to(device)
             sparse_input = ME.SparseTensor(coordinates=voxels.to(device), features=features.to(device))
-            logits = maple_trainer.model(images, sparse_input)
+            logits, fg_prob = maple_trainer.model(images, sparse_input)
+
             # preds = F.softmax(logits, dim=1)  # still on GPU
             # tragets_ext = targets
             # tragets_ext = targets.repeat_interleave(images.shape[1], dim=0)
@@ -238,7 +241,15 @@ def train(data_path,gt_path,val_path, path_to_3d_samples,device='cuda', batch_si
             # print(len(targets))
             # print(targets)
             # exit()
-            loss = F.cross_entropy(logits, targets)
+            # fg_prob = fg_prob.squeeze(-1)
+            # fg_prob = fg_prob / fg_prob.sum()
+            # fg_probs_gt = fg_probs_gt / fg_probs_gt.sum()
+            # log_fg_probs_gt = torch.log(fg_probs_gt.float() + 1e-10)  # Add epsilon for numerical stability
+
+            # Compute KL divergence (element-wise or batch-wise)
+            mse_loss = F.mse_loss(fg_probs_gt.float(), fg_prob.squeeze(-1), reduction='mean') # or 'none', 'sum', 'mean'
+            # print(kl_div_loss)
+            loss = F.cross_entropy(logits, targets)+0.1*mse_loss
             maple_trainer.optim.zero_grad()
             loss.backward()
             maple_trainer.optim.step()

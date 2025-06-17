@@ -9,19 +9,18 @@ if __name__ == '__main__':
     parser.add_argument('--save_best_model_in', type=str, default='./logs', help='Directory to save best model')
     parser.add_argument('--experiment_name', type=str, default='experiment1', help='Directory to save best model')
     parser.add_argument('--num_epochs', type=int, default=1000, help='Number of training epochs')
-    parser.add_argument('--overfit', type=bool, default=False, help='Number of training epochs')
+    parser.add_argument('--overfit', action='store_true', help='Enable fuse mode (default: False)')
     parser.add_argument('--backbone', type=str, default='init', help='Number of training epochs')
     parser.add_argument('--data_path', type=str, default='/mnt/ssda/abo-benchmark-material', help='Number of training epochs')
     parser.add_argument('--gt_path', type=str, default='/mnt/ssda/datasets/abo_500/filtered_product_weights.json', help='Number of training epochs')
     parser.add_argument('--val_path', type=str, default='/mnt/ssda/datasets/abo_500/scenes', help='Number of training epochs')
     parser.add_argument('--path_to_3d_samples', type=str, default='/mnt/ssda/datasets/ABO/raw/3dmodels/preprocessed', help='Number of training epochs')
-    parser.add_argument('--fuse',type=bool, default=False, help='Number of training epochs')
-    parser.add_argument('--mass_step',type=int, default=100, help='Number of training epochs')
+    parser.add_argument('--fuse', action='store_true', help='Enable fuse mode (default: False)')
+    parser.add_argument('--mass_step',type=int, default=2000, help='Number of training epochs')
     # parser.add_argument('--checkpoint', type='', default='', help='Number of training epochs')
     parser.add_argument('--tune_blocks', type=list, default=['layer4'], help='Number of training epochs')
 
     args = parser.parse_args() 
-
     train(
         device=args.device,
         batch_size=args.batch_size,

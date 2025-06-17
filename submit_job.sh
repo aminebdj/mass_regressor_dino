@@ -11,4 +11,4 @@
 #SBATCH --exclude=ikarus
 
 # Run your script
-python train.py --num_epochs 1000 --experiment_name fuse_classifier_3d_high_res_new_min_max --fuse True --batch_size 5 --path_to_3d_samples /cluster/umoja/aminebdj/datasets/ABO/preprocessed --data_path /cluster/umoja/aminebdj/datasets/ABO/abo-benchmark-material --gt_path /cluster/umoja/aminebdj/datasets/ABO/abo_500/filtered_product_weights.json --val_path /cluster/umoja/aminebdj/datasets/ABO/abo_500/scenes
+python train.py --num_epochs 1000 --experiment_name fuse_classifier_3d_new_min_max_interp --fuse --batch_size 5 --path_to_3d_samples /cluster/umoja/aminebdj/datasets/ABO/preprocessed --data_path /cluster/umoja/aminebdj/datasets/ABO/abo-benchmark-material --gt_path /cluster/umoja/aminebdj/datasets/ABO/abo_500/filtered_product_weights.json --val_path /cluster/umoja/aminebdj/datasets/ABO/abo_500/scenes

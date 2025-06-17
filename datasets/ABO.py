@@ -166,7 +166,16 @@ class ABO_DATASET(Dataset):
         # prob = self.sample_to_prob[sample_id] if self.return_probs else self.sample_to_mass[sample_id]
         target_mass = self.sample_to_mass[sample_id]
         class_idx = np.argmin(np.abs(self.corr_property_values-target_mass))
+        descrete_mass = self.corr_property_values[class_idx]
+        if descrete_mass > target_mass:
+            class_idx = class_idx-1
+            descrete_mass = self.corr_property_values[class_idx]
+        
+        
+        fg_prob = (target_mass-descrete_mass)/(self.corr_property_values[1]-self.corr_property_values[0])
+        
+
         # prob = self.sample_to_mass[sample_id]
         # print(prob)
         # exit()
-        return quantized_coords, feats, {'image': img_tensor}, torch.tensor([class_idx]),  torch.tensor([target_mass])
+        return quantized_coords, feats, {'image': img_tensor}, torch.tensor([class_idx]),  torch.tensor([target_mass]),  torch.tensor([fg_prob])

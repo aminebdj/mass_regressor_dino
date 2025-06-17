@@ -204,8 +204,13 @@ class CustomCLIP(nn.Module):
         if not self.clip_classifier:    
             
             self.classifier = nn.Sequential(
-                nn.ReLU(inplace=True),     # ReLU activation
+                nn.ReLU(),     # ReLU activation
                 nn.Linear(self.dim, len(classnames))          # Final linear layer to 2 classes
+                )
+            self.finegrined_prob = nn.Sequential(
+                nn.ReLU(),     # ReLU activation
+                nn.Linear(self.dim, 1),
+                nn.Sigmoid()          # Final linear layer to 2 classes
                 )
 
 
@@ -229,6 +234,8 @@ class CustomCLIP(nn.Module):
         multi_level_clip_feats = []
         # image_features, multi_level_clip_feats = self.image_encoder(image.type(self.dtype))
         if self.fuse:
+            # print('Fused')
+            # exit()
             # print('Fusion')
             image_features, multi_level_clip_feats = self.image_encoder(image.type(self.dtype))
         # image_features = self.image_encoder(image.type(self.dtype))
@@ -243,9 +250,10 @@ class CustomCLIP(nn.Module):
             
         else:
             logits = self.classifier(image_features)
+            fg_prob = self.finegrined_prob(image_features)
         # log_probs = F.softmax(logits, dim=1)
         # logits = self.classifier(torch.cat([image_features, feature_3d.repeat_interleave(N, dim=0)], dim=-1))
-        return logits
+        return logits, fg_prob
 
 def _get_clones(module, N):
     return nn.ModuleList([copy.deepcopy(module) for i in range(N)])
